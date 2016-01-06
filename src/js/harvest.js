@@ -4,31 +4,56 @@
  * This is where you write your app.
  */
 
-var UI = require('ui');
-var Vector2 = require('vector2');
-var Settings = require('settings');
-var ajax = require('ajax');
+var appinfo = require('appinfo');
 
-var options = {};
+console.log("Running JS");
 
 var main = null
 var projectState = null
 
-var DEFAULT_ITEMS = [
-  {
-    title: 'Add',
-    subtitle: 'New Project'
-  },{
-    title: 'Copy',
-    subtitle: 'From Yesterday'
+function option(key, value) {
+  var storageKey = appinfo.uuid + "_data";
+  if (!key) {
+    options = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    return;
   }
-];
+  
+  if (typeof key === 'object') {
+    for (var k in key) {
+      options[k] = key[k];
+    }
+  } else {
+    if (value) {
+      options[key] = value;
+    } else {
+      return options[key];
+    }
+  }
+  localStorage.setItem(storageKey, JSON.stringify(options));
+}
 
-Settings.option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');
+option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');
+
+Pebble.addEventListener('ready', function(e) {
+  option();
+});
+
+Pebble.addEventListener('showConfiguration', function(e) {
+  Pebble.openURL('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html')
+});
+
+Pebble.addEventListener('webviewclosed', function(e) {
+  option(JSON.parse(decodeURIComponent(e.response)));
+});
+
+// Listen for when an AppMessage is received
+Pebble.addEventListener('appmessage', function(e) {
+  console.log(JSON.stringify(e));
+});
 
 // Set a configurable with the open callback
 Settings.config(
-  { url: 'https://rawgit.com/timothysoehnlin/pebblejs/master/config/index.html' },
+  { url: '' },
   function(e) {
     console.log('opening configurable', JSON.stringify(e.options));
     setupMain()
@@ -46,20 +71,27 @@ function rest(method, path, body, success, failure) {
     body = null;
   }
   
-  var config = {
-    method : method,
-    headers : {
-      'Accept' : 'application/json' 
-    },
-    url : 'https://' + Settings.option('token.domain') + '.harvestapp.com' + path + '?access_token=' + Settings.option('oauth.access_token')
-  };
+  var url = 'https://' + option('token.domain') + '.harvestapp.com' + path + '?access_token=' + option('oauth.access_token');  
+  var req = new XMLHttpRequest();
   
+  req.open(method, url);
+  req.setRequestHeader('Accept', 'application/json');
   if (body) {
-    config.data = body;
-    config.type = 'json';
+    req.setRequestHeader('Content-Type', 'application/json');
+  }
+  req.onload = function(e) {
+    console.log("loaded");
+    if(req.status == 200) {      
+      success(JSON.parse(req.response));
+    } else {
+      failure("Request status is " + req.status);
+    }
+  }
+  req.onerror = function(e) {
+    failure(e);
   }
   
-  ajax(config, success, failure);
+  req.send(body ? JSON.stringify(body) : null);
 }
 
 function fetchProjects(success, failure) {
@@ -163,55 +195,7 @@ function selectNewTask() {
       })
     });
     
-    menu.show();
   }, function(err) {
     
   });
 }
-
-function setupTimerScreen() {
-  var menu = new UI.Menu({
-    sections: [{
-      title : 'Tasks',
-      items : [].concat(DEFAULT_ITEMS)
-    }]
-  });
-
-  menu.on('select', function(e) {
-    console.log(JSON.stringify(e));
-    if (e.sectionIndex < menu.sections.length - 2) {
-      if (e.sectionIndex === menu.sections.length - 2) {
-        selectNewTask();
-      }
-      //Do something
-    } else {
-      //Toggle Timer
-    }  
-  });
-
-  menu.on('longSelect', function(e) {
-    if (e.sectionIndex < menu.sections.length - 2) {
-      //Details
-    }  
-  });
-  
-  return menu;
-}
-
-function setupMain() {
-  if (!Settings.option('access_token')) {
-    main = new UI.Card();
-    main.title('Harvest');
-    main.body('Please authorize the app in the settings');
-  } else {
-    main = setupTimerScreen();
-  }
-
-  main.show();
-}
-
-function setItems() {
-  
-} 
-
-setupMain();

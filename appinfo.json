@@ -5,12 +5,14 @@
   "companyName": "MakeAwesomeHappen",
   "versionLabel": "1.0",
   "sdkVersion": "3",
-  "targetPlatforms": ["aplite", "basalt", "chalk"],
+  "targetPlatforms": ["aplite", "basalt"],
   "watchapp": {
     "watchface": false
   },
   "appKeys": {
-    "dummy": 0
+    "projects": 0,
+    "timers" : 1,
+    "timer" : 2
   },
   "resources": {
     "media": []
