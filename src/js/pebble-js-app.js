@@ -1,9 +1,6 @@
-/**
- * Welcome to Pebble.js!
- *
- * This is where you write your app.
- */
-
+//*****************************************************************
+//UTILS
+//*****************************************************************
 function OptionHandler(url, ns) {
   var options = {};
   
@@ -27,6 +24,7 @@ function OptionHandler(url, ns) {
     }
     localStorage.setItem(storageKey, JSON.stringify(options));
   }
+
 
   Pebble.addEventListener('ready', function(e) {
     option();
@@ -58,7 +56,6 @@ function restJSON(method, url, body, success, failure) {
     req.setRequestHeader('Content-Type', 'application/json');
   }
   req.onload = function(e) {
-    console.log("loaded");
     if(req.status == 200) {      
       success(JSON.parse(req.response));
     } else {
@@ -72,70 +69,82 @@ function restJSON(method, url, body, success, failure) {
   req.send(body ? JSON.stringify(body) : null);
 }
 
-var projectState = null
+var memoizeSuccess = (function() {
+  var cached = {};
+   
+   function firstFunctionIndex(arr) {
+     for (var i = 0; i < arr.length;i++) {
+       if (typeof arr[i] === 'function') { 
+         return i;
+       }
+     }
+     return -1;
+   }
+   
+   function copy(val) {
+     if (Array.isArray(val)) { 
+       return val.slice(0);
+     }
+     return val;
+   }
+   
+  return function (fn) {
+    return function() {
+      var args = Array.prototype.slice.call(arguments, 0);
+      var successInd = firstFunctionIndex(args);
+      var origSuccess = args[successInd];
+      var success = function(val) { return origSuccess(copy(val)); }
+      
+      var key = [fn.name].concat(args.slice(0, successInd)).join('||');
+      var val = cached[key];
+      
+      if (val) {
+        return success(val);
+      } else {
+        args[successInd] = function(val) {
+          console.log("Caching", key, val);
+          cached[key] = val;
+          success(val);
+        }; 
+        fn.apply(this, args);
+      }
+    }
+  }
+})();
 
-var option = null;
-
-// Listen for when an AppMessage is received
-Pebble.addEventListener('appmessage', function(e) {
-  console.log(JSON.stringify(e));
-});
-
-Pebble.addEventListener('ready', function(e) {
-  console.log('hi');
-  option = OptionHandler('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
-  option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');
-});
+//*****************************************************************
+//APP
+//*****************************************************************
+var option = OptionHandler('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
 
 function rest(method, path, body, success, failure) {
   var url = 'https://' + option('token.domain') + '.harvestapp.com' + path + '?access_token=' + option('oauth.access_token');
-  restJSON(method, url, body, succes, failure);
+  restJSON(method, url, body, success, failure);
+}
+
+function fetchTasks(success, failure) {
+  rest('GET', '/tasks', function(tasks) {
+    tasks = tasks
+      .filter(function(x) {
+        return !!x.deactivated;
+      })
+      .forEach(function(x) {
+        cache.tasks[x.id] = {
+          id : x.id,
+          name : x.name,
+          is_default : x.is_default
+        }
+      });
+    
+    success(tasks);
+  }, failure);
 }
 
 function fetchProjects(success, failure) {
   console.log("Fetching projects");
   
-  if (projectState) {
-    success(projectState);
-  }
-  
-  var state = {
-    projects : {},
-    tasks : {},
-    projectList : [],
-    projectsRead : 0
-  };
-  
-  function onFailure() {
-    if (failure) {
-      failure();
-      failure = null;
-    } 
-  }
-  
-  function onProject(taskProjects) {
-    if (taskProjects && taskProjects.length) {
-      var projectId = taskProjects[0].task_assignment.project_id; 
-      state.projects[projectId] = taskProjects
-        .map(function(x) {
-          return state.tasks[x.task_assignment.task_id]
-        })
-        .filter(function(x) { return !!x; })
-        .sort(function(a,b) {
-          return a.is_default ? a : (a.name < b.name ? a : b);
-        });
-    }
-    
-    state.projectsRead++;
-    
-    if (state.projectsRead == state.projectList.length) {
-      projectState = state;
-      success(state);
-    }
-  }
-  
   rest('GET', '/projects', function(projects) {
-    state.projectList = projects
+    projects = projects
       .filter(function(x) {
         return x.project.active;
       })
@@ -147,53 +156,76 @@ function fetchProjects(success, failure) {
         };
       })
       .sort(function(a,b) {
-        return a.name < b.name ? a : b;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
       });
           
-    state.projectList
+    success(projects);      
+  }, failure);
+}
+
+function fetchProjectMap(success, failure) {
+  fetchProjects(function(projects) {
+    var projectMap = {};
+    projects
       .forEach(function(x) {
-        state.projects[x.project.id] = x;
+        projectMap[x.id] = x;
       });
-
-    console.log("projects", state.projectList);
-    
-    rest('GET', '/tasks', function(tasks) {     
-      tasks
-        .filter(function(x) {
-          return !!x.deactivated;
-        })
-        .forEach(function(x) {
-          state.tasks[x.id] = {
-            id : x.id,
-            name : x.name,
-            is_default : x.is_default
-          }
-        });
-       
-      projects
-        .forEach(function(proj) {
-          rest('GET', '/projects/' + proj.id + '/task_assignments', onProject, onFailure);
-        });
-    }, onFailure);
-  }, onFailure);
+    success(projectMap);
+  }, failure);
 }
 
-function selectNewTask() {
-  fetchProjects(function(state) {
-    var menu = new UI.Menu({
-      sections: state.projectList.map(function(x) {
-        return {
-          subtitle : x.name,
-          items : x.tasks.map(function(y) {
-             return {
-               subtitle : y.name
-             };
+function fetchProjectTasks(projectId, success, failure) { 
+  fetchTasks(function(tasks) {
+    rest('GET', '/projects/' + projectId + '/task_assignments', function(taskProjects) {
+      if (taskProjects && taskProjects.length) {
+        taskProjects = taskProjects
+          .map(function(x) {
+            return tasks[x.task_assignment.task_id]
           })
-        };
-      })
-    });
-    
-  }, function(err) {
-    
-  });
+          .filter(function(x) { return !!x; })
+          .sort(function(a,b) {
+            return a.is_default ? -1 : a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+          });
+      }
+        
+      success(taskProjects);
+    }, failure);
+  }, failure);
 }
+
+[fetchTasks, fetchProjects, fetchProjectMap, fetchProjectTasks].forEach(function(fn) {
+  window[fn.name] = memoizeSuccess(fn);
+});
+
+
+Pebble.addEventListener('ready', function(e) {
+  option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');
+});
+
+// Listen for when an AppMessage is received
+Pebble.addEventListener('appmessage', function(e) {
+  console.log(JSON.stringify(e));
+  fetchProjects(function(projects) {
+    (function itr() {
+      if (!projects.length) {
+        return;
+      }      
+      var p = projects[0];
+      
+      Pebble.sendAppMessage(
+        {
+          Project : p.id,
+          Name : p.name
+        },
+        function() {
+          projects.shift();
+          itr();
+        }, 
+        function(e) {
+          console.log("Error", e);
+          itr();
+        }
+      );
+    })();
+  });
+});
