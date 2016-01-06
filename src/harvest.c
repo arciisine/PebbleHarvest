@@ -1,15 +1,9 @@
-#include <pebble.h>
+#include "common.h"
+#include "menu.h"
 
 static Window *window;
 static TextLayer *text_layer;
-
-typedef enum {
-  HarvestKeyProject = 0,
-  HarvestKeyTask,
-  HarvestKeyTimer,
-  HarvestKeyName,
-  HarvestKeyActive
-} HarvestKey; 
+static MenuLayer *menu_layer;
 
 static bool send_to_phone_multi(int key, int valueInt, char *valueStr) {
   DictionaryIterator *iter;
@@ -59,6 +53,7 @@ static void window_load(Window *window) {
 
 static void window_unload(Window *window) {
   text_layer_destroy(text_layer);
+  menu_layer_destroy(menu_layer);
 }
 
 static void in_received_handler(DictionaryIterator *iter, void *context) {
