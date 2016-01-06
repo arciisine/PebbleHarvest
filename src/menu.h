@@ -20,7 +20,7 @@ typedef struct MenuSection {
 typedef struct Menu {
   Window* window;
   char* title;
-  TextLayer* titleLayer;
+  TextLayer* title_layer;
   Layer* parent;
   MenuSection* sections[MAX_MENU_SIZE];
   MenuItem* items[MAX_MENU_SIZE];
@@ -36,4 +36,4 @@ void menu_close(Menu* menu);
 void menu_open(Menu* menu);
 void menu_empty(Menu* menu);
 MenuSection* menu_add_section(Menu* menu, char* title);
-MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t sectionId);
+MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id);

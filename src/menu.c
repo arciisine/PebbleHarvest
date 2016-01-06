@@ -5,7 +5,6 @@ void menu_empty(Menu* menu) {
   for (int s = 0; s < menu->section_count; s++ ) {
     MenuSection* section = menu->sections[s];
     section->item_count = 0;
-    free_and_clear(section);
   }
   
   for (int i = 0; i < menu->item_count; i++) {
@@ -15,23 +14,25 @@ void menu_empty(Menu* menu) {
     item->id = 0;
   }
   
-  menu->section_count = 0;  
   menu->item_count = 0;
 }
 
 uint16_t menu_row_count(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
-  return menu->sections[section_index]->item_count;
+  int count = menu->sections[section_index]->item_count;
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu row count: %p, %d", menu, count);
+  return count;
 }
 
 int16_t menu_header_height(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
   MenuSection* section = menu->sections[section_index];
-  return (section->title != NULL) ? 20 : 0;
+  return (section->title != NULL && section->item_count > 0) ? 20 : 0;
 }
 
 uint16_t menu_section_count(struct MenuLayer *menu_layer, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu section count: %p, %d", menu, menu->section_count);
   return menu->section_count;
 }
 
@@ -41,16 +42,18 @@ void menu_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t section_i
   GRect bounds = layer_get_frame(cell_layer);
   
   if (section->title) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw header: %p, %s", menu, section->title);
     graphics_draw_text(ctx, section->title, 
-    fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), 
-    (GRect) { .size = { bounds.size.w, 20}, .origin = { 0, 0 } }, 
-    GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+      fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), 
+      (GRect) { .size = { bounds.size.w, 20}, .origin = { 0, 0 } }, 
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
   }
 }
 
 void menu_draw_row(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
   Menu* menu = (Menu*) data;
   MenuItem* item = menu->sections[cell_index->section]->items[cell_index->row];
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw row: %p, %p", menu, item);
   menu_cell_basic_draw(ctx, cell_layer, item->title, item->subtitle, NULL);
 }
 
@@ -75,35 +78,42 @@ void menu_close(Menu* menu) {
 }
 
 MenuSection* menu_add_section(Menu* menu, char* title) {
-  MenuSection* section = (MenuSection*)malloc(sizeof(MenuSection));
-  menu->sections[menu->section_count++] = section;
+  MenuSection* section = menu->sections[menu->section_count];
+  if (section == NULL) {
+    section = menu->sections[menu->section_count] = (MenuSection*)malloc(sizeof(MenuSection));
+  }
+  
   section->title = strdup(title);
-  section->id = menu->section_count-1; 
+  section->id = menu->section_count;
+  menu->section_count += 1; 
   return section;
 }
 
-MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t sectionId) {
+MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu adding item: %p, %s", menu, item.title);
   
-  MenuSection* section = menu->sections[sectionId];
+  MenuSection* section = menu->sections[section_id];
   
   //Don't require section if using basic list 
-  if (!section && sectionId == 0) {
-    menu_add_section(menu, NULL);
-    section = menu->sections[sectionId];
+  if (section == NULL && section_id == 0) {
+    section = menu_add_section(menu, NULL);
   }
   
-  if (!menu->items[menu->item_count]) {
-    menu->items[menu->item_count] = malloc(sizeof(MenuItem));
+  MenuItem* copy = menu->items[menu->item_count];
+  
+  if (copy == NULL) {
+    copy = menu->items[menu->item_count] = malloc(sizeof(MenuItem));
   }
 
-  MenuItem* copy = menu->items[menu->item_count++];
   copy->title = strdup(item.title);
   copy->subtitle = strdup(item.subtitle);
   copy->id = item.id;
   copy->icon = item.icon;
  
-  section->items[section->item_count++] = copy;
+  section->items[section->item_count] = copy;
+  
+  section->item_count += 1;
+  menu->item_count += 1;
   
   menu_layer_reload_data(menu->layer);
   return copy;  
@@ -146,12 +156,12 @@ Menu* menu_create(char* title) {
     bounds.size.h -= 20;
     bounds.origin.y += 20;
     
-    menu->titleLayer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { bounds.size.w, 20 } });
-    text_layer_set_background_color(menu->titleLayer, GColorFromHEX(0x666666));
-    text_layer_set_text_color(menu->titleLayer, GColorFromHEX(0xFFFFFF));
-    text_layer_set_text(menu->titleLayer, menu->title);
-    text_layer_set_text_alignment(menu->titleLayer, GTextAlignmentCenter);
-    layer_add_child(menu->parent, text_layer_get_layer(menu->titleLayer));
+    menu->title_layer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { bounds.size.w, 20 } });
+    text_layer_set_background_color(menu->title_layer, GColorFromHEX(0x666666));
+    text_layer_set_text_color(menu->title_layer, GColorFromHEX(0xFFFFFF));
+    text_layer_set_text(menu->title_layer, menu->title);
+    text_layer_set_text_alignment(menu->title_layer, GTextAlignmentCenter);
+    layer_add_child(menu->parent, text_layer_get_layer(menu->title_layer));
   }
 
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Setting menu layer: %p", menu);
@@ -195,7 +205,7 @@ void menu_destroy(Menu* menu) {
   
   menu_layer_destroy(menu->layer);
   if (menu->title != NULL) {
-    text_layer_destroy(menu->titleLayer);
+    text_layer_destroy(menu->title_layer);
     free_and_clear(menu->title);
   }
   window_destroy(menu->window);
