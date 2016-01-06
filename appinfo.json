@@ -10,12 +10,12 @@
     "watchface": false
   },
   "appKeys": {
-    "Project": 0,
-    "Task" : 1,
-    "Timer" : 2,
-    "Name" : 3,
-    "Active" : 4,
-    "Count" : 5
+    "Action" : 0,
+    "Project": 1,
+    "Task" : 2,
+    "Timer" : 3,
+    "Name" : 4,
+    "Active" : 5
   },
   "resources": {
     "media": []

@@ -1,6 +1,11 @@
 #include "common.h"
 #include "menu.h"
 
+#define CELL_HEIGHT 30
+#define CELL_PADDING 3
+#define ICON_HEIGHT (CELL_HEIGHT - 5)
+#define TITLE_HEIGHT 20
+
 void menu_empty(Menu* menu) {
   for (int s = 0; s < menu->section_count; s++ ) {
     MenuSection* section = menu->sections[s];
@@ -20,19 +25,19 @@ void menu_empty(Menu* menu) {
 uint16_t menu_row_count(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
   int count = menu->sections[section_index]->item_count;
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu row count: %p, %d", menu, count);
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu row count: %p, %d", menu, count);
   return count;
 }
 
 int16_t menu_header_height(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
   MenuSection* section = menu->sections[section_index];
-  return (section->title != NULL && section->item_count > 0) ? 20 : 0;
+  return (section->title != NULL && section->item_count > 0) ? TITLE_HEIGHT : 0;
 }
 
 uint16_t menu_section_count(struct MenuLayer *menu_layer, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu section count: %p, %d", menu, menu->section_count);
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu section count: %p, %d", menu, menu->section_count);
   return menu->section_count;
 }
 
@@ -42,19 +47,36 @@ void menu_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t section_i
   GRect bounds = layer_get_frame(cell_layer);
   
   if (section->title) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw header: %p, %s", menu, section->title);
+    //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw header: %p, %s", menu, section->title);
     graphics_draw_text(ctx, section->title, 
       fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), 
-      (GRect) { .size = { bounds.size.w, 20}, .origin = { 0, 0 } }, 
+      (GRect) { .size = { bounds.size.w, TITLE_HEIGHT}, .origin = { 0, 0 } }, 
       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
   }
+}
+
+int16_t menu_cell_height(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {
+  return CELL_HEIGHT;
 }
 
 void menu_draw_row(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
   Menu* menu = (Menu*) data;
   MenuItem* item = menu->sections[cell_index->section]->items[cell_index->row];
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw row: %p, %p", menu, item);
-  menu_cell_basic_draw(ctx, cell_layer, item->title, item->subtitle, NULL);
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw row: %p, %p", menu, item);
+  GRect bounds = layer_get_frame(cell_layer);
+ 
+  int left_padding = (item->icon ? ICON_HEIGHT : 0) + CELL_PADDING;
+  int right_padding = CELL_PADDING;
+  int all_padding = left_padding + right_padding;
+  bool small_text = strlen(item->title) > 10;
+  char* font_key =  small_text ? FONT_KEY_GOTHIC_14_BOLD : FONT_KEY_GOTHIC_18_BOLD;
+  int font_height = small_text ? 18 : 24;
+  int vertical_padding = (CELL_HEIGHT - font_height) / 2;
+  
+  graphics_draw_text(ctx, item->title, 
+    fonts_get_system_font(font_key), 
+    (GRect) { .size = { bounds.size.w - all_padding, font_height}, .origin = { left_padding, vertical_padding } }, 
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
 void menu_select_click(MenuLayer* menu_layer, MenuIndex* index, void* data) {
@@ -90,7 +112,7 @@ MenuSection* menu_add_section(Menu* menu, char* title) {
 }
 
 MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu adding item: %p, %s", menu, item.title);
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu adding item: %p, %s", menu, item.title);
   
   MenuSection* section = menu->sections[section_id];
   
@@ -131,6 +153,11 @@ void menu_window_unload(Window* window) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window unloaded: %p, %p", menu, menu->parent);
 }
 
+MenuItem* menu_get_selected_item(Menu* menu) {
+  MenuIndex index = menu_layer_get_selected_index(menu->layer);
+  return menu->sections[index.section]->items[index.row];
+}
+
 Menu* menu_create(char* title) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Initializing menu");
     
@@ -153,10 +180,10 @@ Menu* menu_create(char* title) {
   if (title != NULL) {
     menu->title = strdup(title);
     
-    bounds.size.h -= 20;
-    bounds.origin.y += 20;
+    bounds.size.h -= TITLE_HEIGHT;
+    bounds.origin.y += TITLE_HEIGHT;
     
-    menu->title_layer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { bounds.size.w, 20 } });
+    menu->title_layer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { bounds.size.w, TITLE_HEIGHT } });
     text_layer_set_background_color(menu->title_layer, GColorFromHEX(0x666666));
     text_layer_set_text_color(menu->title_layer, GColorFromHEX(0xFFFFFF));
     text_layer_set_text(menu->title_layer, menu->title);
@@ -176,6 +203,7 @@ Menu* menu_create(char* title) {
     .get_num_rows = menu_row_count,
     .get_num_sections = menu_section_count,
     .get_header_height = menu_header_height,
+    .get_cell_height = menu_cell_height,
     .draw_row = menu_draw_row,
     .draw_header = menu_draw_header,
     .select_click = menu_select_click,

@@ -56,7 +56,7 @@ function restJSON(method, url, body, success, failure) {
     req.setRequestHeader('Content-Type', 'application/json');
   }
   req.onload = function(e) {
-    if(req.status == 200) {      
+    if(req.status >= 200 && req.status < 400) {      
       success(JSON.parse(req.response));
     } else {
       failure("Request status is " + req.status);
@@ -66,8 +66,10 @@ function restJSON(method, url, body, success, failure) {
     failure(e);
   }
   
-  console.log("Making request", method, url);
-  req.send(body ? JSON.stringify(body) : null);
+  body = body ? JSON.stringify(body) : null
+  
+  console.log("Making request", method, url, body);
+  req.send(body);
 }
 
 var memoizeSuccess = (function() {
@@ -113,29 +115,55 @@ var memoizeSuccess = (function() {
   }
 })();
 
-function stream(transform) {
-  return function(data) {
-    (function itr() {
-      if (!data.length) {
-        return;
-      }      
-      var out = transform(data[0]);
-
-      console.log(JSON.stringify(out));
-      
-      Pebble.sendAppMessage(
-        out,
-        function() {
-          data.shift();
-          itr();
-        }, 
-        function(e) {
-          console.log("Error", e);
-          itr();
-        }
-      );
-    })();
+function MessageQueue() {
+  var queue = [];
+  var active = false;
+  
+  function iterate() {
+    if (!queue.length) {
+      active = false;
+      return;
+    }
+    
+    var out = queue[0];
+    
+    console.log(JSON.stringify(out));
+    
+    Pebble.sendAppMessage(
+      out,
+      function() {
+        queue.shift();
+        iterate();
+      }, 
+      function(e) {
+        console.log("Error", e);
+        iterate();
+      }
+    );
   }
+  
+  return {
+    add : function enqueue(data, fn) {
+      if (!Array.isArray(data)) {
+        data = [data];
+      }
+      queue = queue.concat(fn ? data.map(fn) : data);
+      if (!active) {
+        active = true;
+        iterate();
+      }
+    },
+    adder : function(fn) {
+      var self = this;
+      return function(data) {
+        self.add(data, fn);
+      };
+    },
+    clear : function() {
+      queue = [];
+      active = false;
+    }
+  };
 }
 
 function fetchListAsMap(fn, keyFn, succ, fail) {
@@ -148,14 +176,86 @@ function fetchListAsMap(fn, keyFn, succ, fail) {
   }, fail);
 }
 
+function dayOfYear() {
+  var now = new Date().getTime();
+  var start = new Date(now.getFullYear(), 0, 0).geTime();
+  var diff = now - start;
+  var oneDay = 1000 * 60 * 60 * 24;
+  return parseInt(''+Math.floor(diff / oneDay));
+}
+
 //*****************************************************************
 //APP
 //*****************************************************************
 var option = OptionHandler('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
+var queue = MessageQueue();
 
 function rest(method, path, body, success, failure) {
   var url = 'https://' + option('token.domain') + '.harvestapp.com' + path + '?access_token=' + option('oauth.access_token');
   restJSON(method, url, body, success, failure);
+}
+
+function fetchRecentAssignemnts(success, failure) {  
+  rest('GET', '/daily/' + dayOfYear() + '/' + new Date().getFullYear(), function(assignments) {
+    assignments.day_entries.map(function(x) {
+       return {
+         projectId : x.day_entry.project_id,
+         taskId : x.day_entry.task_id
+       };
+    });
+  }, failure);
+}
+
+function fetchTimers(success, failure) {  
+  rest('GET', '/daily', function(assignments) {
+    var active = assignments.day_entries.map(function(x) {
+       return {
+         active : true,
+         projectId : x.day_entry.project_id,
+         projectTitle : x.day_entry.project,
+         taskId : x.day_entry.task_id,
+         taskTitle : x.day_entry.task,
+         id : x.day_entry.id
+       };
+    });
+    return active;
+  }, failure);
+}
+
+function fetchRecentProjectTaskMap(success, failure) {  
+  rest('GET', '/daily', function(assignments) {
+    var recent = {};
+    function addProjectTask(projectid, taskid) {
+      if (!recent[projectid]) {
+        recent[projectid] = {};
+      }
+      recent[projectid][taskid] = true;
+    }
+    
+    assignments.day_entries.forEach(function(x) {
+      addProjectTask(x.day_entry.project_id, x.day_entry.task_id);
+    });
+    
+    assignments.projects.forEach(function(p) {
+      p.tasks.forEach(function(t) {
+        addProjectTask(p.id, t.id);
+      });
+    });
+    
+    return recent;
+  }, failure);
+}
+
+function createTimer(projectId, taskId, success, failure) {
+  var data = {
+    "project_id" : projectId,
+    "task_id" : taskId
+  };
+  rest('POST', '/daily/add', data, success, failure);
+}
+
+function toggleTimer(entryId, success, failure) {  
+  rest('POST', '/daily/timer/'+entryId, success, failure);
 }
 
 function fetchTasks(success, failure) {
@@ -230,7 +330,7 @@ function fetchProjectTasks(projectId, success, failure) {
   }, failure);
 }
 
-[fetchTasks,fetchTaskMap, fetchProjects, fetchProjectMap, fetchProjectTasks].forEach(function(fn) {
+[fetchTasks,fetchTaskMap, fetchProjects, fetchProjectMap, fetchProjectTasks, fetchRecentProjectTaskMap].forEach(function(fn) {
   window[fn.name] = memoizeSuccess(fn);
 });
 
@@ -242,17 +342,78 @@ Pebble.addEventListener('ready', function(e) {
 Pebble.addEventListener('appmessage', function(e) {
   var data = e.payload;
   console.log(JSON.stringify(data));
-  if (data.Project !== undefined && data.Task !== undefined) {
-    fetchProjectTasks(data.Project, stream(function(t) {
-      return { Task : t.id, Name : t.name };
-    }), function(err) {
-      console.log(err);
+  
+  function err(e) {
+    console.log(e);
+    queue.add({
+      Action : "Error",
     });
-  } else if (data.Project !== undefined) {
-    fetchProjects(stream(function(p) {
-      return { Project : p.id, Name : p.name };
-    }), function(err) {
-      console.log(err);
-    });
+  }
+  
+  switch (data.Action) {
+    case 'project-list':
+      fetchRecentProjectTaskMap(function(recent) {
+        fetchProjects(queue.adder(function(p) {
+          return { 
+            Action : 'project-added',
+            Project : p.id,
+            Active: recent[p.id] !== undefined,
+            Name : p.name 
+          };
+        }), err);
+      }, err);
+      break;
+    case 'timer-list':
+      fetchTimers(function(data) {
+        data.forEach(function(t) {
+          queue.add([{
+            Action : "timer-add-begin",
+            Timer : t.id,
+            Project : t.projectId,
+            Task : t.taskId,
+            Active : t.active
+          }, {
+            Action : "timer-add-project-name",
+            Name : t.projectTitle
+          },{
+            Action : "timer-add-task-name",
+            Name : t.taskTitle
+          }, {
+            Action : "timer-add-complete"
+          }])
+        });
+      }, err);
+      break;      
+    case 'project-tasks':
+      fetchRecentProjectTaskMap(function(recent) {
+        fetchProjectTasks(data.Project, queue.adder(function(t) {
+          return {
+            Action : 'project-task-added',  
+            Task : t.id, 
+            Active : recent[data.Project][t.id] !== undefined,
+            Name : t.name 
+          };
+        }), err);
+      }, err);
+      break;
+    case 'timer-add':
+      createTimer(data.Project, data.Task, queue.adder(function(timer) {
+        return { 
+          Action : 'timer-list-reload', 
+          Timer : timer.day_entry.id 
+        };
+      }), err);
+      break;
+    case 'timer-toggle':
+      toggleTimer(data.Timer, queue.adder(function(timer) {
+        return {
+          Action : 'timer-list-reload',
+          Timer : timer.id,
+          Active : !timer.ended_at && !!timer.timer_started_at
+        };
+      }), err);
+      break;
+    default:
+      console.lot("Unknown action", data.Action);
   }
 });
