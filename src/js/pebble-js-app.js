@@ -119,10 +119,12 @@ function stream(transform) {
       if (!data.length) {
         return;
       }      
-      var it = data[0];
+      var out = transform(data[0]);
+
+      console.log(JSON.stringify(out));
       
       Pebble.sendAppMessage(
-        transform(it),
+        out,
         function() {
           data.shift();
           itr();
@@ -233,7 +235,7 @@ function fetchProjectTasks(projectId, success, failure) {
 });
 
 Pebble.addEventListener('ready', function(e) {
-  option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');
+  option('access_token', 'f8NAb9sXnWJ7jiN9xaClMswBk9VmpZCnpzHDD8ETVj5AuFFlYDPkmdireKiDoZFxqcysOBAFu119bTPz67S');
 });
 
 // Listen for when an AppMessage is received

@@ -7,6 +7,8 @@ static TextLayer *text_layer;
 static Menu *project_menu;
 static Menu *task_menu;
 static Menu *timer_menu;
+static int projectRecent = -1;
+static int projectAll = -1;
 
 static bool send_message(int count, ...) {
   va_list argp;
@@ -33,8 +35,8 @@ static bool send_message(int count, ...) {
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   text_layer_set_text(text_layer, "Select");
-  if (project_menu->size == 0) {
-    send_message(1, HarvestKeyProject, 0);  
+  if (project_menu->item_count == 0) {
+    send_message(1, HarvestKeyProject, projectAll);  
     menu_empty(project_menu);
   }
   menu_open(project_menu);
@@ -77,13 +79,16 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(text_layer));
   
-  project_menu = menu_create();
+  project_menu = menu_create("Project List");
   project_menu->click = project_select_handler;
   
-  task_menu = menu_create();
+  projectRecent = menu_add_section(project_menu, "Recent")->id;
+  projectAll = menu_add_section(project_menu, "All")->id;
+  
+  task_menu = menu_create("Task List");
   task_menu->click = task_select_handler;
   
-  timer_menu = menu_create();
+  timer_menu = menu_create("Timers");
 }
 
 static void window_unload(Window *window) {
@@ -99,15 +104,16 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *name_tuple = dict_find(iter, HarvestKeyName);
 
   if (project_tuple) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Received project: %s", name_tuple->value->cstring);
     menu_add_item(project_menu, (MenuItem) {
       .title = name_tuple->value->cstring,
       .id = project_tuple->value->uint32
-    });
+    }, 0);
   } else if (task_tuple) {
     menu_add_item(task_menu, (MenuItem) {
       .title = name_tuple->value->cstring,
       .id = task_tuple->value->uint32
-    });
+    }, 0);
   }
 }
 
