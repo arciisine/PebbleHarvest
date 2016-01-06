@@ -1,47 +1,33 @@
 #include "common.h"
 #include "menu.h"
 
-#define MAX_MENU_SIZE 200
-
-static MenuLayer *menu_layer;
-static MenuItem *menu_items[MAX_MENU_SIZE];
-static MenuSelectHandler *menu_select_handler;
-static int menu_size = 0;
-
-void menu_window_load(Window *window) {
-  Layer *window_layer = window_get_root_layer(window);
-  GRect bounds = layer_get_frame(window_layer);  
-  menu_layer = menu_layer_create(bounds);
-}
-
-void menu_window_unload(Window *window) {
-  menu_layer_destroy(menu_layer);
-}
-
-void menu_close() {
-  for (int i = 0; i < menu_size; i++) {
-    free(menu_items[i]->title);
-    free(menu_items[i]->subtitle);
-    menu_items[i]->title = NULL;
-    menu_items[i]->subtitle = NULL;
-    menu_items[i]->id = 0;
+void menu_empty(Menu* menu) {
+  for (int i = 0; i < menu->size; i++) {
+    free(menu->items[i]->title);
+    free(menu->items[i]->subtitle);
+    menu->items[i]->title = NULL;
+    menu->items[i]->subtitle = NULL;
+    menu->items[i]->id = 0;
   }
-  menu_size = 0; 
-  menu_layer_destroy(menu_layer);
+  menu->size = 0; 
 }
 
-void menu_cleanup() {
+void menu_destroy(Menu* menu) {  
+  menu_empty(menu);
+  
   for (uint16_t i = 0; i < MAX_MENU_SIZE; i++) {
-    if (menu_items[i]) {
-      free(menu_items[i]);
+    if (menu->items[i] != NULL) {
+      free(menu->items[i]);
     }
   }
-  free(menu_select_handler);
-  menu_size = 0;
+  
+  menu_layer_destroy(menu->layer);
+  free(menu);
 }
 
 uint16_t menu_row_count(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
-  return menu_size;
+  Menu* menu = (Menu*) callback_context;
+  return menu->size;
 }
 
 uint16_t menu_section_count(struct MenuLayer *menu_layer, void *callback_context) {
@@ -54,46 +40,36 @@ int16_t menu_get_header_height(MenuLayer *menu_layer, uint16_t section_index, vo
 }
 
 void menu_draw_row(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
-  MenuIndex row = menu_layer_get_selected_index(menu_layer);
-  MenuItem* item = menu_items[row.row];
+  Menu* menu = (Menu*) data;
+  MenuIndex row = menu_layer_get_selected_index(menu->layer);
+  MenuItem* item = menu->items[row.row];
   menu_cell_basic_draw(ctx, cell_layer, item->title, item->subtitle, NULL);
 }
 
 void menu_select_click(MenuLayer* menu_layer, MenuIndex* index, void* data) {
-   menu_select_handler->click(menu_items[index->row]); 
+   Menu* menu = (Menu*) data;
+   menu->click(menu->items[index->row], false); 
 }
 
 void menu_select_long_click(MenuLayer* menu_layer, MenuIndex* index, void* data) {
-   menu_select_handler->long_click(menu_items[index->row]); 
+   Menu* menu = (Menu*) data;
+   menu->click(menu->items[index->row], true); 
 }
 
-void menu_open(MenuSelectHandler menuSelect) {
-  if (menu_size > 0) {
-    menu_close();
-  }
-  if (menu_select_handler == NULL) {
-    menu_select_handler = malloc(sizeof(MenuSelectHandler));
-  }
-  
-  menu_select_handler->click = menuSelect.click;  
-  menu_select_handler->long_click = menuSelect.long_click;
-  
-  menu_layer_set_callbacks(menu_layer, NULL, (MenuLayerCallbacks) {
-    .get_num_rows = menu_row_count,
-    .get_header_height = menu_get_header_height,
-    .get_num_sections = menu_section_count,
-    .draw_row = menu_draw_row,
-    .select_click = menu_select_click,
-    .select_long_click = menu_select_long_click
-  });
+void menu_open(Menu* menu) {
+  layer_set_hidden((Layer*) menu->layer, false);
 }
 
-void menu_add_item(MenuItem* item) {
-  menu_size++;
-  if (!menu_items[menu_size]) {
-    menu_items[menu_size] = malloc(sizeof(MenuItem));
+void menu_close(Menu* menu) {
+  layer_set_hidden((Layer*) menu->layer, true);
+}
+
+void menu_add_item(Menu* menu, MenuItem* item) {
+  menu->size++;
+  if (!menu->items[menu->size]) {
+    menu->items[menu->size] = malloc(sizeof(MenuItem));
   }
-  MenuItem* copy = menu_items[menu_size];  
+  MenuItem* copy = menu->items[menu->size];  
   copy->title = malloc(sizeof(char)*strlen(item->title));
   strcpy(copy->title, item->title);
   
@@ -101,4 +77,24 @@ void menu_add_item(MenuItem* item) {
   strcpy(copy->subtitle, item->subtitle);
   
   copy->id = item->id;
+}
+
+Menu* menu_create(Window *window) {
+  Menu* menu = (Menu*) malloc(sizeof(Menu));
+  menu->parent = window_get_root_layer(window);
+  GRect bounds = layer_get_frame(menu->parent);  
+  menu->layer = menu_layer_create(bounds);
+
+  layer_set_hidden((Layer*)menu->layer, true);
+
+  menu_layer_set_callbacks(menu->layer, menu, (MenuLayerCallbacks) {
+    .get_num_rows = menu_row_count,
+    .get_header_height = menu_get_header_height,
+    .get_num_sections = menu_section_count,
+    .draw_row = menu_draw_row,
+    .select_click = menu_select_click,
+    .select_long_click = menu_select_long_click
+  });
+  
+  return menu;  
 }

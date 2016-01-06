@@ -1,20 +1,26 @@
 #pragma once
 #include "common.h"
 
+#define MAX_MENU_SIZE 200
+
 typedef struct MenuItem {
   char* title;
   char* subtitle;
   int id;
 } MenuItem;
 
-typedef struct MenuSelectHandler {
-   void (*click)(MenuItem*);
-   void (*long_click)(MenuItem*);
-} MenuSelectHandler;
+typedef struct Menu {
+  Layer* parent;
+  uint16_t size;
+  MenuItem* items[MAX_MENU_SIZE];
+  MenuLayer* layer;
+  void (*click)(MenuItem*, bool);
+} Menu;
 
-void menu_close();
-void menu_cleanup();
-void menu_open(MenuSelectHandler menuSelect);
-void menu_add_item(MenuItem* item);
-void menu_window_load(Window *window);
-void menu_window_unload(Window *window);
+Menu* menu_create(Window* parent);
+void menu_destroy(Menu* menu);
+
+void menu_close(Menu* menu);
+void menu_open(Menu* menu);
+void menu_empty(Menu* menu);
+void menu_add_item(Menu* menu, MenuItem* item);

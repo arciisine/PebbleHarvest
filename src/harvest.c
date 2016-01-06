@@ -3,7 +3,9 @@
 
 static Window *window;
 static TextLayer *text_layer;
-static MenuLayer *menu_layer;
+static Menu *project_menu;
+static Menu *task_menu;
+static Menu *timer_menu;
 
 static bool send_to_phone_multi(int key, int valueInt, char *valueStr) {
   DictionaryIterator *iter;
@@ -49,11 +51,17 @@ static void window_load(Window *window) {
   text_layer_set_text(text_layer, "Press a button");
   text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(text_layer));
+  
+  project_menu = menu_create(window);
+  task_menu = menu_create(window);
+  timer_menu = menu_create(window);
 }
 
 static void window_unload(Window *window) {
   text_layer_destroy(text_layer);
-  menu_layer_destroy(menu_layer);
+  menu_destroy(project_menu);
+  menu_destroy(task_menu);
+  menu_destroy(timer_menu);
 }
 
 static void in_received_handler(DictionaryIterator *iter, void *context) {
