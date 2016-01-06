@@ -67,9 +67,9 @@ window.config = (function() {
       saveAndClose : function() {
         var opts = this.formToOptions();
         var str = this.writeOptions(opts);
-        var returnTo = this.queryParams().return_to || 'pebblejs://close';
+        var returnTo = this.queryParams().return_to || 'pebblejs://close#';
         
-        document.location.assign(returnTo + '#' + encodeURIComponent(str));
+        document.location.assign(returnTo + encodeURIComponent(str));
       }
   };
   

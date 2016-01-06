@@ -4,74 +4,52 @@
  * This is where you write your app.
  */
 
-var appinfo = require('appinfo');
-
-console.log("Running JS");
-
-var main = null
-var projectState = null
-
-function option(key, value) {
-  var storageKey = appinfo.uuid + "_data";
-  if (!key) {
-    options = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    return;
-  }
+function OptionHandler(url, ns) {
+  var options = {};
   
-  if (typeof key === 'object') {
-    for (var k in key) {
-      options[k] = key[k];
+  function option(key, value) {
+    var storageKey = ns + "_data";
+    if (!key) {
+      options = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      return;
     }
-  } else {
-    if (value) {
-      options[key] = value;
+    
+    if (typeof key === 'object') {
+      for (var k in key) {
+        options[k] = key[k];
+      }
     } else {
-      return options[key];
+      if (value) {
+        options[key] = value;
+      } else {
+        return options[key];
+      }
     }
+    localStorage.setItem(storageKey, JSON.stringify(options));
   }
-  localStorage.setItem(storageKey, JSON.stringify(options));
+
+  Pebble.addEventListener('ready', function(e) {
+    option();
+  });
+
+  Pebble.addEventListener('showConfiguration', function(e) {
+    Pebble.openURL(url)
+  });
+
+  Pebble.addEventListener('webviewclosed', function(e) {
+    option(JSON.parse(decodeURIComponent(e.response || '{}')));
+  });
+  
+  return option;
 }
 
-option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');
-
-Pebble.addEventListener('ready', function(e) {
-  option();
-});
-
-Pebble.addEventListener('showConfiguration', function(e) {
-  Pebble.openURL('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html')
-});
-
-Pebble.addEventListener('webviewclosed', function(e) {
-  option(JSON.parse(decodeURIComponent(e.response)));
-});
-
-// Listen for when an AppMessage is received
-Pebble.addEventListener('appmessage', function(e) {
-  console.log(JSON.stringify(e));
-});
-
-// Set a configurable with the open callback
-Settings.config(
-  { url: '' },
-  function(e) {
-    console.log('opening configurable', JSON.stringify(e.options));
-    setupMain()
-  },
-  function(e) {
-    setupMain();
-    console.log('closed configurable', JSON.stringify(e.options));
-  }
-);
-
-function rest(method, path, body, success, failure) {
+function restJSON(method, url, body, success, failure) {
   if (typeof body === 'function') {
     failure = success;
     success = body;
     body = null;
   }
-  
-  var url = 'https://' + option('token.domain') + '.harvestapp.com' + path + '?access_token=' + option('oauth.access_token');  
+    
   var req = new XMLHttpRequest();
   
   req.open(method, url);
@@ -92,6 +70,26 @@ function rest(method, path, body, success, failure) {
   }
   
   req.send(body ? JSON.stringify(body) : null);
+}
+
+var projectState = null
+
+var option = null;
+
+// Listen for when an AppMessage is received
+Pebble.addEventListener('appmessage', function(e) {
+  console.log(JSON.stringify(e));
+});
+
+Pebble.addEventListener('ready', function(e) {
+  console.log('hi');
+  option = OptionHandler('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
+  option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');
+});
+
+function rest(method, path, body, success, failure) {
+  var url = 'https://' + option('token.domain') + '.harvestapp.com' + path + '?access_token=' + option('oauth.access_token');
+  restJSON(method, url, body, succes, failure);
 }
 
 function fetchProjects(success, failure) {
