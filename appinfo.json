@@ -1,0 +1,18 @@
+{
+  "uuid": "012bed8a-a42e-4369-9648-044af22f3332",
+  "shortName": "PebbleHarvest",
+  "longName": "PebbleHarvest",
+  "companyName": "MakeAwesomeHappen",
+  "versionLabel": "1.0",
+  "sdkVersion": "3",
+  "targetPlatforms": ["aplite", "basalt", "chalk"],
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}
