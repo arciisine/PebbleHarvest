@@ -136,6 +136,16 @@ function stream(transform) {
   }
 }
 
+function fetchListAsMap(fn, keyFn, succ, fail) {
+  fn(function(data) {
+    var out = {};
+    data.forEach(function(x) {
+      out[keyFn(x)] = x; 
+    });    
+    succ(out);
+  }, fail);
+}
+
 //*****************************************************************
 //APP
 //*****************************************************************
@@ -150,18 +160,24 @@ function fetchTasks(success, failure) {
   rest('GET', '/tasks', function(tasks) {
     tasks = tasks
       .filter(function(x) {
-        return !!x.deactivated;
+        return !x.task.deactivated;
       })
-      .forEach(function(x) {
-        cache.tasks[x.id] = {
-          id : x.id,
-          name : x.name,
-          is_default : x.is_default
+      .map(function(x) {
+        return {
+          id : x.task.id,
+          name : x.task.name,
+          is_default : x.task.is_default
         }
       });
     
+    console.log(JSON.stringify(tasks));
+
     success(tasks);
   }, failure);
+}
+
+function fetchTaskMap(success, failure) {
+  fetchListAsMap(fetchTasks, function(x) { return x.id }, success, failure);
 }
 
 function fetchProjects(success, failure) {
@@ -188,20 +204,15 @@ function fetchProjects(success, failure) {
 }
 
 function fetchProjectMap(success, failure) {
-  fetchProjects(function(projects) {
-    var projectMap = {};
-    projects
-      .forEach(function(x) {
-        projectMap[x.id] = x;
-      });
-    success(projectMap);
-  }, failure);
+  fetchListAsMap(fetchProjects, function(x) { return x.id }, success, failure);
 }
 
 function fetchProjectTasks(projectId, success, failure) { 
-  fetchTasks(function(tasks) {
+  fetchTaskMap(function(tasks) {
     rest('GET', '/projects/' + projectId + '/task_assignments', function(taskProjects) {
       if (taskProjects && taskProjects.length) {
+        console.log(JSON.stringify(tasks));
+
         taskProjects = taskProjects
           .map(function(x) {
             return tasks[x.task_assignment.task_id]
@@ -211,20 +222,15 @@ function fetchProjectTasks(projectId, success, failure) {
             return a.is_default ? -1 : a.name.toLowerCase().localeCompare(b.name.toLowerCase());
           });
       }
-        
+              
       success(taskProjects);
     }, failure);
   }, failure);
 }
 
-[fetchTasks, fetchProjects, fetchProjectMap, fetchProjectTasks].forEach(function(fn) {
+[fetchTasks,fetchTaskMap, fetchProjects, fetchProjectMap, fetchProjectTasks].forEach(function(fn) {
   window[fn.name] = memoizeSuccess(fn);
 });
-
-function sendProjects() {
-  
-}
-
 
 Pebble.addEventListener('ready', function(e) {
   option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');

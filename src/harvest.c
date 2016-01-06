@@ -101,12 +101,12 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
   if (project_tuple) {
     menu_add_item(project_menu, (MenuItem) {
       .title = name_tuple->value->cstring,
-      .id = *project_tuple->value->data
+      .id = project_tuple->value->uint32
     });
   } else if (task_tuple) {
     menu_add_item(task_menu, (MenuItem) {
       .title = name_tuple->value->cstring,
-      .id = *task_tuple->value->data
+      .id = task_tuple->value->uint32
     });
   }
 }
