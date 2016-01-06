@@ -66,6 +66,7 @@ function restJSON(method, url, body, success, failure) {
     failure(e);
   }
   
+  console.log("Making request", method, url);
   req.send(body ? JSON.stringify(body) : null);
 }
 
@@ -112,6 +113,29 @@ var memoizeSuccess = (function() {
   }
 })();
 
+function stream(transform) {
+  return function(data) {
+    (function itr() {
+      if (!data.length) {
+        return;
+      }      
+      var it = data[0];
+      
+      Pebble.sendAppMessage(
+        transform(it),
+        function() {
+          data.shift();
+          itr();
+        }, 
+        function(e) {
+          console.log("Error", e);
+          itr();
+        }
+      );
+    })();
+  }
+}
+
 //*****************************************************************
 //APP
 //*****************************************************************
@@ -146,7 +170,7 @@ function fetchProjects(success, failure) {
   rest('GET', '/projects', function(projects) {
     projects = projects
       .filter(function(x) {
-        return x.project.active;
+        return x.project.active && x.project.name;
       })
       .map(function(x) {
         return {
@@ -197,6 +221,10 @@ function fetchProjectTasks(projectId, success, failure) {
   window[fn.name] = memoizeSuccess(fn);
 });
 
+function sendProjects() {
+  
+}
+
 
 Pebble.addEventListener('ready', function(e) {
   option('access_token', 'DGg6cAR70edArkQ8ZQMTcdDLaCD43rvwUGzBnLKHo8E1qIVZGeFDXm3SAK5xFrC8xkV_kGyKcW-YHZ-R6X70SA');
@@ -204,28 +232,19 @@ Pebble.addEventListener('ready', function(e) {
 
 // Listen for when an AppMessage is received
 Pebble.addEventListener('appmessage', function(e) {
-  console.log(JSON.stringify(e));
-  fetchProjects(function(projects) {
-    (function itr() {
-      if (!projects.length) {
-        return;
-      }      
-      var p = projects[0];
-      
-      Pebble.sendAppMessage(
-        {
-          Project : p.id,
-          Name : p.name
-        },
-        function() {
-          projects.shift();
-          itr();
-        }, 
-        function(e) {
-          console.log("Error", e);
-          itr();
-        }
-      );
-    })();
-  });
+  var data = e.payload;
+  console.log(JSON.stringify(data));
+  if (data.Project !== undefined && data.Task !== undefined) {
+    fetchProjectTasks(data.Project, stream(function(t) {
+      return { Task : t.id, Name : t.name };
+    }), function(err) {
+      console.log(err);
+    });
+  } else if (data.Project !== undefined) {
+    fetchProjects(stream(function(p) {
+      return { Project : p.id, Name : p.name };
+    }), function(err) {
+      console.log(err);
+    });
+  }
 });

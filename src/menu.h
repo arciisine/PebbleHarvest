@@ -10,6 +10,7 @@ typedef struct MenuItem {
 } MenuItem;
 
 typedef struct Menu {
+  Window* window;
   Layer* parent;
   uint16_t size;
   MenuItem* items[MAX_MENU_SIZE];
@@ -17,10 +18,9 @@ typedef struct Menu {
   void (*click)(MenuItem*, bool);
 } Menu;
 
-Menu* menu_create(Window* parent);
+Menu* menu_create();
 void menu_destroy(Menu* menu);
-
 void menu_close(Menu* menu);
 void menu_open(Menu* menu);
 void menu_empty(Menu* menu);
-void menu_add_item(Menu* menu, MenuItem* item);
+MenuItem* menu_add_item(Menu* menu, MenuItem item);

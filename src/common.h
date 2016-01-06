@@ -6,5 +6,6 @@ typedef enum {
   HarvestKeyTask,
   HarvestKeyTimer,
   HarvestKeyName,
-  HarvestKeyActive
+  HarvestKeyActive,
+  HarvestKeyCount,
 } HarvestKey; 
