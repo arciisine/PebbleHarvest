@@ -1,54 +1,57 @@
-function BaseRest {
-  this.memoize = [];
-  this._memoizeCache = {};
-}
-
-BaseRest.prototype.exec = function(method, url, body) {
-  var def = new Deferred();  
-  var req = new XMLHttpRequest();
-  
-  req.open(method, url);
-  req.setRequestHeader('Accept', 'application/json');
-  if (body) {
-    req.setRequestHeader('Content-Type', 'application/json');
+class BaseRest {
+  constructor() { 
+    this.memoize = [];
+    this._memoizeCache = {};
   }
-  req.onload = function(e) {
-    if(req.status >= 200 && req.status < 400) {      
-      def.resolve(JSON.parse(req.response));
-    } else {
-      def.reject("Request status is " + req.status);
+  
+  exec(method:string, url:string, body:string):Promise {
+    var def = new Deferred();  
+    var req = new XMLHttpRequest();
+    
+    req.open(method, url);
+    req.setRequestHeader('Accept', 'application/json');
+    if (body) {
+      req.setRequestHeader('Content-Type', 'application/json');
     }
+    req.onload = function(e) {
+      if(req.status >= 200 && req.status < 400) {      
+        def.resolve(JSON.parse(req.response));
+      } else {
+        def.reject("Request status is " + req.status);
+      }
+    }
+    req.onerror = def.reject;
+    
+    body = body ? JSON.stringify(body) : null
+    
+    req.send(body);
+    
+    return def.promise;
   }
-  req.onerror = def.reject;
   
-  body = body ? JSON.stringify(body) : null
+  get(url:string):Promise {
+    return this.exec('GET', url);
+  }
   
-  req.send(body);
-}
-
-BaseRest.prototype.get = function(url) {
-  return this.exec('GET', url);
-}
-
-BaseRest.prototype.post = function(url, data) {
-  return this.exec('POST', url, data);
-}
-
-BaseRest.prototype.listToMap = function(promise, keyProp) {
-  var def = new Deferred();
+  post(url:string, data:string):Promise {
+    return this.exec('POST', url, data);
+  }
   
-  promise.then(function(data) {
-      var out = {};
-      data.forEach(function(x) {
-        out[x[keyProp]] = x; 
-      });    
-      def.resolve(out);
-    }, def.reject);
+  listToMap(promise, keyProp) {
+    var def = new Deferred();
+    
+    promise.then(function(data) {
+        var out = {};
+        data.forEach(function(x) {
+          out[x[keyProp]] = x; 
+        });    
+        def.resolve(out);
+      }, def.reject);
+    
+    return def.promise;
+  }
   
-  return def.promise;
-}
-
-BaseRest.prototype.memoize = function(fn, name) {
+  memoize(fn, name) {
    name = fn.name || 'Key' + Math.random();
    var self = this;
    
@@ -67,4 +70,4 @@ BaseRest.prototype.memoize = function(fn, name) {
       });
     }
   };
-};
+}
