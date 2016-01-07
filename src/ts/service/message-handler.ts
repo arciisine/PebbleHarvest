@@ -1,4 +1,4 @@
-export function message(key:string) {
+export function message(key:number|string) {
   return (target: Object, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) => {
     descriptor.value.onMessage = key;
     return descriptor;
@@ -6,30 +6,41 @@ export function message(key:string) {
 }
 
 export default class MessageHandler {
-  constructor(key) {
-    this._messageKey = key;
+  _handlers:{[key:string] : Pebble.Handler} = {};
+  appKey:string = null;
+  actionKeyTranslator:(any) => string = null;
+  
+  constructor(appKey, actionKeyTranslator?:(any) => string) {
+    this.appKey = appKey;
+    this.actionKeyTranslator = actionKeyTranslator;
    
-   for (let k in this) {
-      if (this[k].onMessage) {
+    //Auto register
+    for (let k in this) {
+      if (this[k].onMessage !== undefined) {
         this.register(this[k].onMessage, this[k]);
       }
     }
     
+    //Bind error to this context
+    this.onError =this.onError.bind(this);
+    
     // Listen for when an AppMessage is received
     Pebble.addEventListener('appmessage', this.onMessage.bind(this));   
   }
-
-  _handlers:{[key:string] : Pebble.Handler} = {};
-  _messageKey:string = null;
-    
+      
   onMessage(e:Pebble.Message):void {
     let data = e.payload;
-    let key = data[this._messageKey];
+    let key:string|number = this.translateKey(data[this.appKey]);
     
     console.log(JSON.stringify(data));
     
     if (this._handlers[key]) {
-      this._handlers[key].call(this, data, this.onError.bind(this));
+      let ret = this._handlers[key].call(this, data);
+      
+      //Auto listen for errors if a promise is returned
+      if (ret.then) {
+        ret.then(null, this.onError);
+      }
     } else {
       this.onError("Unknown action:" + key);
     }
@@ -38,8 +49,17 @@ export default class MessageHandler {
   onError(err) {
     console.log(err);
   }
+  
+  translateKey(key:number|string):string {
+    if (this.actionKeyTranslator) {
+      return this.actionKeyTranslator[key];
+    } else {
+      return '' + key;
+    }
+  }
 
-  register(key:string, fn?:Pebble.Handler) {
+  register(key:number|string, fn?:Pebble.Handler) {
+    key = this.translateKey(key);
     console.log("Registering handler", key);
     this._handlers[key] = fn;
   }

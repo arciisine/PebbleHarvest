@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build" : "./node_modules/.bin/tsc -p .; cat src/js/app-template.js | sed -e '/\"BODY\"/ r src/js/app-body.js' > src/js/pebble-js-app.js",
-    "build-message" : "node --harmony --use_strict message-format-builder.js",
+    "build" : "./node_modules/.bin/tsc -p .; cat src/ts/app-template.js | sed -e '/\"BODY\"/ r src/js/app-body.js' > src/js/pebble-js-app.js",
+    "gen-message-format" : "node --harmony --use_strict message-format-builder.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

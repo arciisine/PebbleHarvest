@@ -23,24 +23,29 @@ function toArray(o) {
 }
 
 fs.writeFileSync('src/message_format.h', `
-enum {
+//GENERATED, please run \`npm run-script gen-message-format\` to update
+#pragma once
+typedef enum {
   ${entries(actionKeys).map(x => `Action${x[0]} = ${x[1]}`).join(',\n')} 
 } Action;
 
-enum {
+typedef enum {
   ${entries(appKeys).map(x => `AppKey${x[0]} = ${x[1]}`).join(',\n')} 
 } AppKey;
 
-char** ActionNames = { ${toArray(appKeys).map(x => !x ? 'NULL' : `"${x}"`).join(',\n')}};
+const char* ActionNames[] = { ${toArray(appKeys).map(x => !x ? 'NULL' : `"${x}"`).join(',\n')}};
 
 `);
 
 fs.writeFileSync('src/ts/message-format.ts', `
-  export enum Action {
-    ${entries(actionKeys).map(x => `${x[0]} = ${x[1]}`).join(',\n')}
-  }
-  
-  export enum AppKey {
-    ${entries(appKeys).map(x => `${x[0]} = ${x[1]}`).join(',\n')} 
-  } AppKey;
+//GENERATED, please run \`npm run-script gen-message-format\` to update
+export enum Action {
+  ${entries(actionKeys).map(x => `${x[0]} = ${x[1]}`).join(',\n')}
+}
+
+export let ActionNames:string[] = [${toArray(appKeys).map(x => !x ? 'null' : `"${x}"`).join(',\n')}];
+
+export enum AppKey {
+  ${entries(appKeys).map(x => `${x[0]} = ${x[1]}`).join(',\n')} 
+} AppKey;
 `);

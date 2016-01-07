@@ -42,14 +42,7 @@ export default class MessageQueue {
       this._iterate();
     }
   }
-  
-  pusher(fn:(any)=>Pebble.MessagePayload):(any)=>void {
-    return (data:any|any[]) => {
-      let arr:any[] = Array.isArray(data) ? data : [data];
-      this.push(arr.map(fn));
-    };
-  }
-  
+
   clear():void {
     this._queue = [];
     this._active = false;

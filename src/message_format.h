@@ -1,5 +1,9 @@
 
-enum {
+//GENERATED, please run `npm run-script gen-message-format` to update
+#ifndef __TEST__
+#define __TEST__
+#pragma once
+typedef enum {
   ActionReady = 0,
 ActionError = 1,
 ActionProjectListFetch = 2,
@@ -11,17 +15,18 @@ ActionTaskListStart = 7,
 ActionTaskListItem = 8,
 ActionTaskListEnd = 9,
 ActionTimerListReload = 10,
-ActionTimerListStart = 11,
-ActionTimerListEnd = 12,
-ActionTimerListItemStart = 13,
-ActionTimerListItemProjectName = 14,
-ActionTimerListItemTaskName = 15,
-ActionTimerListItemEnd = 16,
-ActionTimerAdd = 17,
-ActionTimerToggle = 18 
+ActionTimerListFetch = 11,
+ActionTimerListStart = 12,
+ActionTimerListEnd = 13,
+ActionTimerListItemStart = 14,
+ActionTimerListItemProjectName = 15,
+ActionTimerListItemTaskName = 16,
+ActionTimerListItemEnd = 17,
+ActionTimerAdd = 18,
+ActionTimerToggle = 19 
 } Action;
 
-enum {
+typedef enum {
   AppKeyAction = 0,
 AppKeyProject = 1,
 AppKeyTask = 2,
@@ -30,7 +35,7 @@ AppKeyName = 4,
 AppKeyActive = 5 
 } AppKey;
 
-char** ActionNames = { "Ready",
+const char* ActionNames[] = { "Ready",
 "Error",
 "ProjectListFetch",
 "ProjectListStart",
@@ -41,6 +46,7 @@ char** ActionNames = { "Ready",
 "TaskListItem",
 "TaskListEnd",
 "TimerListReload",
+"TimerListFetch",
 "TimerListStart",
 "TimerListEnd",
 "TimerListItemStart",
@@ -50,3 +56,4 @@ char** ActionNames = { "Ready",
 "TimerAdd",
 "TimerToggle"};
 
+#endif

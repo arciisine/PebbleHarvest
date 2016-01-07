@@ -17,8 +17,6 @@ static int task_all = -1;
 static int timer_list = -1;
 static int timer_actions = -1;
 
-static MenuItem* buffered_timer;
-
 static GBitmap *plus_icon;
 static GBitmap *checkmark_active;
 static GBitmap *checkmark_inactive;
@@ -74,7 +72,7 @@ static void open_project_menu() {
 static void project_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Project selected: %p, %d %s",item, item->id, item->title);
   menu_empty(task_menu);
-  send_message(ActionTasksFetch, 1, AppKeyProject, item->id);
+  send_message(ActionTaskListFetch, 1, AppKeyProject, item->id);
   menu_open(task_menu);
 }
 
@@ -100,70 +98,27 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
   }
 }
 
-static void in_received_handler(DictionaryIterator *iter, void *context) {
-  Action action = dict_find(iter, AppKeyAction)->value->uint32;
+static void on_timerlist_build(DictionaryIterator *iter, Action action) {
+  static MenuItem* buffered_timer;
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s", ActionNames[action]);
-  
   switch(action) {
-    case ActionReady:
-      reload_timers();
+    case ActionTimerListStart: 
       break;
-      
-    case ActionProjectListStart:
-      break;
-    case ActionProjectListItem:
-      Tuple *project_tuple = dict_find(iter, AppKeyProject);
-      Tuple *name_tuple = dict_find(iter, AppKeyName);
-      Tuple *active_tuple = dict_find(iter, AppKeyActive);
-
-      menu_add_item(project_menu, (MenuItem) {
-        .title = name_tuple->value->cstring,
-        .id = project_tuple->value->uint32
-      }, active_tuple->value->uint32 == 1 ? project_recent : project_all);
-      break;
-    case ActionProjectListEnd:
-      break;
-      
-      
-    case ActionTaskListStart:
-      break;
-    case ActionTaskListItem:
-      Tuple *task_tuple = dict_find(iter, AppKeyTask);
-      Tuple *name_tuple = dict_find(iter, AppKeyName);
-      Tuple *active_tuple = dict_find(iter, AppKeyActive);
-      
-      menu_add_item(task_menu, (MenuItem) {
-        .title = name_tuple->value->cstring,
-        .id = task_tuple->value->uint32,
-      }, active_tuple->value->uint32 == 1 ? task_recent : task_all);
-      break;
-    case ActionTaskLisEnd:
-      break;      
-      
-    case ActionTimerListReload:
-      reload_timers();
-      break;
-      
-    case ActionTimerListStart:
-      break;
-      
-    case ActionTimerListItemStart:
-      Tuple *timer_tuple = dict_find(iter, AppKeyTimer);
-      Tuple *active_tuple = dict_find(iter, AppKeyActive);
-      
+            
+    case ActionTimerListItemStart:      
       buffered_timer = (MenuItem*) malloc(sizeof(MenuItem));
-      buffered_timer->id = timer_tuple->value->uint32;
-      buffered_timer->icon = active_tuple->value->uint32 == 1 ? checkmark_active : checkmark_inactive;
+      buffered_timer->id = dict_key_int(iter, AppKeyTimer);
+      buffered_timer->icon = dict_key_bool(iter, AppKeyActive) ? checkmark_active : checkmark_inactive;
       break;
+      
     case ActionTimerListItemProjectName:
-      Tuple *name_tuple = dict_find(iter, AppKeyName);
-      buffered_timer->title = strdup(name_tuple->value->cstring);
+      buffered_timer->title = strdup(dict_key_str(iter, AppKeyName));
       break;
+      
     case ActionTimerListItemTaskName:
-      Tuple *name_tuple = dict_find(iter, AppKeyName);
-      buffered_timer->subtitle = strdup(name_tuple->value->cstring);
+      buffered_timer->subtitle = strdup(dict_key_str(iter, AppKeyName));
       break;
+      
     case ActionTimerListItemEnd:
       menu_add_item(timer_menu, *buffered_timer, timer_list);
       free_and_clear(buffered_timer->title);
@@ -171,8 +126,83 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
       free_and_clear(buffered_timer);
       break;
       
-    case ActionTimerListEnd:
+    case ActionTimerListEnd: 
       break;
+      
+    default: break;/** do nothing */
+  }
+}
+
+static void on_tasklist_build(DictionaryIterator *iter, Action action) {
+  switch(action) {
+    case ActionTaskListStart: 
+      break;
+      
+    case ActionTaskListItem:
+      menu_add_item(task_menu, (MenuItem) {
+        .title = dict_key_str(iter, AppKeyName),
+        .id = dict_key_int(iter, AppKeyTask),
+      }, dict_key_bool(iter, AppKeyActive) ? task_recent : task_all);
+      break;
+      
+    case ActionTaskListEnd: 
+      break;
+      
+    default: break;/** do nothing */
+  }    
+}
+
+static void on_projectlist_build(DictionaryIterator *iter, Action action) {
+  switch(action) {
+    case ActionProjectListStart: 
+      break;
+      
+    case ActionProjectListItem:
+      menu_add_item(project_menu, (MenuItem) {
+        .title = dict_key_str(iter, AppKeyName),
+        .id = dict_key_int(iter, AppKeyProject)
+      }, dict_key_bool(iter, AppKeyActive) ? project_recent : project_all);
+      break;
+      
+    case ActionProjectListEnd: 
+      break;
+      
+    default: break;/** do nothing */
+  }
+}
+
+static void on_message(DictionaryIterator *iter, void *context) {
+  Action action = (Action) dict_find(iter, AppKeyAction)->value->uint32;
+
+  const char* actionName = ActionNames[action];
+
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s", actionName);
+  
+  switch(action) {
+    case ActionReady:
+      reload_timers();
+      break;
+
+    case ActionTimerListReload:
+      reload_timers();
+      break;
+      
+    case ActionProjectListStart:
+    case ActionProjectListItem:
+    case ActionProjectListEnd: 
+      return on_projectlist_build(iter, action);
+      
+    case ActionTaskListStart:
+    case ActionTaskListItem:
+    case ActionTaskListEnd: 
+      return on_tasklist_build(iter, action);      
+      
+    case ActionTimerListStart:      
+    case ActionTimerListItemStart:      
+    case ActionTimerListItemProjectName:
+    case ActionTimerListItemTaskName:
+    case ActionTimerListItemEnd:
+      return on_timerlist_build(iter, action);
       
     default:
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s UNKNOWN", actionName);
@@ -206,7 +236,7 @@ static void main_menu_unload(Window *window) {
 
 static void init(void) {
   // Register message handlers
-  app_message_register_inbox_received(in_received_handler);
+  app_message_register_inbox_received(on_message);
   
   // Init buffers
   app_message_open(120, 120);

@@ -1,6 +1,7 @@
 
-  export enum Action {
-    Ready = 0,
+//GENERATED, please run `npm run-script gen-message-format` to update
+export enum Action {
+  Ready = 0,
 Error = 1,
 ProjectListFetch = 2,
 ProjectListStart = 3,
@@ -11,21 +12,43 @@ TaskListStart = 7,
 TaskListItem = 8,
 TaskListEnd = 9,
 TimerListReload = 10,
-TimerListStart = 11,
-TimerListEnd = 12,
-TimerListItemStart = 13,
-TimerListItemProjectName = 14,
-TimerListItemTaskName = 15,
-TimerListItemEnd = 16,
-TimerAdd = 17,
-TimerToggle = 18
-  }
-  
-  export enum AppKey {
-    Action = 0,
+TimerListFetch = 11,
+TimerListStart = 12,
+TimerListEnd = 13,
+TimerListItemStart = 14,
+TimerListItemProjectName = 15,
+TimerListItemTaskName = 16,
+TimerListItemEnd = 17,
+TimerAdd = 18,
+TimerToggle = 19
+}
+
+export let ActionNames:string[] = ["Ready",
+"Error",
+"ProjectListFetch",
+"ProjectListStart",
+"ProjectListItem",
+"ProjectListEnd",
+"TaskListFetch",
+"TaskListStart",
+"TaskListItem",
+"TaskListEnd",
+"TimerListReload",
+"TimerListFetch",
+"TimerListStart",
+"TimerListEnd",
+"TimerListItemStart",
+"TimerListItemProjectName",
+"TimerListItemTaskName",
+"TimerListItemEnd",
+"TimerAdd",
+"TimerToggle"];
+
+export enum AppKey {
+  Action = 0,
 Project = 1,
 Task = 2,
 Timer = 3,
 Name = 4,
 Active = 5 
-  } AppKey;
+} AppKey;

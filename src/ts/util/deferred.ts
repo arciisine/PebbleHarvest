@@ -1,5 +1,5 @@
 export interface Promise<T> {
-  then(succ:(T)=>void, fail?:(any?)=>void):void
+  then(succ:(T)=>void, fail?:(any?)=>void):Promise<T>
 }
 
 export class Deferred<T> {
