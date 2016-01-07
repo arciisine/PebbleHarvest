@@ -1,4 +1,5 @@
 #include "common.h"
+#include "message_format.h"
 #include "menu.h"
 #include <stdarg.h>
 
@@ -22,17 +23,17 @@ static GBitmap *plus_icon;
 static GBitmap *checkmark_active;
 static GBitmap *checkmark_inactive;
 
-static bool send_message(char* action, int count, ...) {
+static bool send_message(Action action, int count, ...) {
   va_list argp;
   
   va_start(argp, count);
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Send Message: %s", action);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Send Message: %s", ActionNames[action]);
 
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
   
-  dict_write_cstring(iter, HarvestKeyAction, action);
+  dict_write_uint32(iter, AppKeyAction, action);
   
   for (int i = 0; i < count; i++) {  
     int key = va_arg(argp, int);
@@ -58,13 +59,13 @@ static void reload_timers() {
     .icon = plus_icon,
     .id = -1
   }, timer_actions);
-  send_message("timer-list", 0);
+  send_message(ActionTimerListFetch, 0);
   menu_open(timer_menu);
 }
 
 static void open_project_menu() {
   if (project_menu->item_count == 0) {
-    send_message("project-list", 0);  
+    send_message(ActionProjectListFetch, 0);  
     menu_empty(project_menu);
   }
   menu_open(project_menu);
@@ -73,16 +74,16 @@ static void open_project_menu() {
 static void project_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Project selected: %p, %d %s",item, item->id, item->title);
   menu_empty(task_menu);
-  send_message("project-tasks", 1, HarvestKeyProject, item->id);
+  send_message(ActionTasksFetch, 1, AppKeyProject, item->id);
   menu_open(task_menu);
 }
 
 static void task_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Task selected: %p, %d %s",item, item->id, item->title);
    
-  send_message("timer-add", 2, 
-    HarvestKeyProject, menu_get_selected_item(project_menu)->id,
-    HarvestKeyTask, item->id
+  send_message(ActionTimerAdd, 2, 
+    AppKeyProject, menu_get_selected_item(project_menu)->id,
+    AppKeyTask, item->id
   );
 }
 
@@ -90,8 +91,8 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer selected: %p, %d %s",item, item->id, item->title);
   if (item->id > 0) {
     if (!longPress) {
-      send_message("timer-toggle", 2, 
-          HarvestKeyTimer, item->id
+      send_message(ActionTimerToggle, 2, 
+          AppKeyTimer, item->id
       );
     }
   } else if (item->id == -1) {
@@ -100,60 +101,81 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
 }
 
 static void in_received_handler(DictionaryIterator *iter, void *context) {
-  char* action = dict_find(iter, HarvestKeyAction)->value->cstring;
-  
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s", action);
-  
-  if (strcmp(action, "ready") == 0) {
-    reload_timers();
-  //Add Project to list
-  } else if (strcmp(action, "project-added") == 0) {
-    Tuple *project_tuple = dict_find(iter, HarvestKeyProject);
-    Tuple *name_tuple = dict_find(iter, HarvestKeyName);
-    Tuple *active_tuple = dict_find(iter, HarvestKeyActive);
+  Action action = dict_find(iter, AppKeyAction)->value->uint32;
 
-    menu_add_item(project_menu, (MenuItem) {
-      .title = name_tuple->value->cstring,
-      .id = project_tuple->value->uint32
-    }, active_tuple->value->uint32 == 1 ? project_recent : project_all);
-    
-  //Add task to list
-  } else if (strcmp(action, "project-task-added") == 0) {
-    Tuple *task_tuple = dict_find(iter, HarvestKeyTask);
-    Tuple *name_tuple = dict_find(iter, HarvestKeyName);
-    Tuple *active_tuple = dict_find(iter, HarvestKeyActive);
-    
-    menu_add_item(task_menu, (MenuItem) {
-      .title = name_tuple->value->cstring,
-      .id = task_tuple->value->uint32,
-    }, active_tuple->value->uint32 == 1 ? task_recent : task_all);
-    
-  //Reload timer list
-  } else if (strcmp(action, "timer-list-reload") == 0) {
-    reload_timers();
-    
-  //Handle timer (too big for buffer)
-  } else if (strcmp(action, "timer-add-begin") == 0) {
-    Tuple *timer_tuple = dict_find(iter, HarvestKeyTimer);
-    Tuple *active_tuple = dict_find(iter, HarvestKeyActive);
-    
-    buffered_timer = (MenuItem*) malloc(sizeof(MenuItem));
-    buffered_timer->id = timer_tuple->value->uint32;
-    buffered_timer->icon = active_tuple->value->uint32 == 1 ? checkmark_active : checkmark_inactive;
-        
-  } else if (strcmp(action, "timer-add-project-name") == 0) {
-    Tuple *name_tuple = dict_find(iter, HarvestKeyName);
-    buffered_timer->title = strdup(name_tuple->value->cstring);
-  } else if (strcmp(action, "timer-add-task-name") == 0) {
-    Tuple *name_tuple = dict_find(iter, HarvestKeyName);
-    buffered_timer->subtitle = strdup(name_tuple->value->cstring);
-  } else if (strcmp(action, "timer-add-complete") == 0) {
-    menu_add_item(timer_menu, *buffered_timer, timer_list);
-    free_and_clear(buffered_timer->title);
-    free_and_clear(buffered_timer->subtitle);
-    free_and_clear(buffered_timer);
-  } else {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s UNKNOWN", action);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s", ActionNames[action]);
+  
+  switch(action) {
+    case ActionReady:
+      reload_timers();
+      break;
+      
+    case ActionProjectListStart:
+      break;
+    case ActionProjectListItem:
+      Tuple *project_tuple = dict_find(iter, AppKeyProject);
+      Tuple *name_tuple = dict_find(iter, AppKeyName);
+      Tuple *active_tuple = dict_find(iter, AppKeyActive);
+
+      menu_add_item(project_menu, (MenuItem) {
+        .title = name_tuple->value->cstring,
+        .id = project_tuple->value->uint32
+      }, active_tuple->value->uint32 == 1 ? project_recent : project_all);
+      break;
+    case ActionProjectListEnd:
+      break;
+      
+      
+    case ActionTaskListStart:
+      break;
+    case ActionTaskListItem:
+      Tuple *task_tuple = dict_find(iter, AppKeyTask);
+      Tuple *name_tuple = dict_find(iter, AppKeyName);
+      Tuple *active_tuple = dict_find(iter, AppKeyActive);
+      
+      menu_add_item(task_menu, (MenuItem) {
+        .title = name_tuple->value->cstring,
+        .id = task_tuple->value->uint32,
+      }, active_tuple->value->uint32 == 1 ? task_recent : task_all);
+      break;
+    case ActionTaskLisEnd:
+      break;      
+      
+    case ActionTimerListReload:
+      reload_timers();
+      break;
+      
+    case ActionTimerListStart:
+      break;
+      
+    case ActionTimerListItemStart:
+      Tuple *timer_tuple = dict_find(iter, AppKeyTimer);
+      Tuple *active_tuple = dict_find(iter, AppKeyActive);
+      
+      buffered_timer = (MenuItem*) malloc(sizeof(MenuItem));
+      buffered_timer->id = timer_tuple->value->uint32;
+      buffered_timer->icon = active_tuple->value->uint32 == 1 ? checkmark_active : checkmark_inactive;
+      break;
+    case ActionTimerListItemProjectName:
+      Tuple *name_tuple = dict_find(iter, AppKeyName);
+      buffered_timer->title = strdup(name_tuple->value->cstring);
+      break;
+    case ActionTimerListItemTaskName:
+      Tuple *name_tuple = dict_find(iter, AppKeyName);
+      buffered_timer->subtitle = strdup(name_tuple->value->cstring);
+      break;
+    case ActionTimerListItemEnd:
+      menu_add_item(timer_menu, *buffered_timer, timer_list);
+      free_and_clear(buffered_timer->title);
+      free_and_clear(buffered_timer->subtitle);
+      free_and_clear(buffered_timer);
+      break;
+      
+    case ActionTimerListEnd:
+      break;
+      
+    default:
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s UNKNOWN", actionName);
   }
 }
 
@@ -181,7 +203,6 @@ static void main_menu_unload(Window *window) {
   gbitmap_destroy(checkmark_active);
   gbitmap_destroy(checkmark_inactive);
 }
-
 
 static void init(void) {
   // Register message handlers
