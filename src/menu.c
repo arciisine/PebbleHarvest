@@ -47,8 +47,12 @@ void menu_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t section_i
   MenuSection* section = menu->sections[section_index];
   GRect bounds = layer_get_frame(cell_layer);
   
+  graphics_context_set_stroke_color(ctx, GColorFromHEX(0x000000));
+  graphics_draw_line(ctx, (GPoint){0,1}, (GPoint){bounds.size.w,1});
+  graphics_draw_line(ctx, (GPoint){0,bounds.size.h-1}, (GPoint){bounds.size.w,bounds.size.h-1});
+
   if (section->title) {
-    //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw header: %p, %s", menu, section->title);
+    //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw header: %p, %s", menu, section->title);    
     graphics_draw_text(ctx, section->title, 
       fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), 
       (GRect) { .size = { bounds.size.w, TITLE_HEIGHT}, .origin = { 0, 0 } }, 

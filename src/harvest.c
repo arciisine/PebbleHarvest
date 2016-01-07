@@ -115,7 +115,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
     menu_add_item(project_menu, (MenuItem) {
       .title = name_tuple->value->cstring,
       .id = project_tuple->value->uint32
-    }, active_tuple->value->uint32 == 0 ? project_recent : project_all);
+    }, active_tuple->value->uint32 == 1 ? project_recent : project_all);
     
   //Add task to list
   } else if (strcmp(action, "project-task-added") == 0) {
@@ -126,7 +126,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
     menu_add_item(task_menu, (MenuItem) {
       .title = name_tuple->value->cstring,
       .id = task_tuple->value->uint32,
-    }, active_tuple->value->uint32 == 0 ? task_recent : task_all);
+    }, active_tuple->value->uint32 == 1 ? task_recent : task_all);
     
   //Reload timer list
   } else if (strcmp(action, "timer-list-reload") == 0) {

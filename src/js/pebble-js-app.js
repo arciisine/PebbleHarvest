@@ -274,9 +274,7 @@ function fetchRecentProjectTaskMap(success, failure) {
       });
     });
     
-    console.log(JSON.stringify(recent));
-    
-    return recent;
+    success(recent);
   }, failure);
 }
 
@@ -425,7 +423,7 @@ var MessageHandlers = {
     createTimer(data.Project, data.Task, queue.pusher(function(timer) {
       return { 
         Action : 'timer-list-reload', 
-        Timer : timer.day_entry.id 
+        Timer : timer.id 
       };
     }), err);
   },
