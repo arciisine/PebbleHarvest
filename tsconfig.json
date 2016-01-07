@@ -2,8 +2,8 @@
   "compilerOptions": {
     "target" : "es5",
     "module" : "amd",
-    "outDir": "./src/js",
-    "outFile":"./src/js/app.js",
-    "rootDir": "./src/ts" 
+    "outDir": "src/js",
+    "outFile":"src/js/app-body.js",
+    "rootDir": "src/ts" 
   }
 }

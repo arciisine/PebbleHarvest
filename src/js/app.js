@@ -3,7 +3,9 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-define("service/message-queue", ["require", "exports"], function (require, exports) {
+module.exports = 'typescript';
+module.exports = 'ts';
+define("src/ts/service/message-queue", ["require", "exports"], function (require, exports) {
     "use strict";
     var MessageQueue = (function () {
         function MessageQueue() {
@@ -59,7 +61,7 @@ define("service/message-queue", ["require", "exports"], function (require, expor
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = MessageQueue;
 });
-define("service/options", ["require", "exports"], function (require, exports) {
+define("src/ts/service/options", ["require", "exports"], function (require, exports) {
     "use strict";
     var OptionService = (function () {
         function OptionService(url, ns) {
@@ -104,7 +106,7 @@ define("service/options", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = OptionService;
 });
-define("util/deferred", ["require", "exports"], function (require, exports) {
+define("src/ts/util/deferred", ["require", "exports"], function (require, exports) {
     "use strict";
     var Deferred = (function () {
         function Deferred() {
@@ -162,7 +164,7 @@ define("util/deferred", ["require", "exports"], function (require, exports) {
     }());
     exports.Deferred = Deferred;
 });
-define("model/timer", ["require", "exports"], function (require, exports) {
+define("src/ts/model/timer", ["require", "exports"], function (require, exports) {
     "use strict";
     var TimerModel = (function () {
         function TimerModel() {
@@ -172,7 +174,7 @@ define("model/timer", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = TimerModel;
 });
-define("model/task", ["require", "exports"], function (require, exports) {
+define("src/ts/model/task", ["require", "exports"], function (require, exports) {
     "use strict";
     var ProjectTaskModel = (function () {
         function ProjectTaskModel() {
@@ -182,7 +184,7 @@ define("model/task", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = ProjectTaskModel;
 });
-define("model/project", ["require", "exports"], function (require, exports) {
+define("src/ts/model/project", ["require", "exports"], function (require, exports) {
     "use strict";
     var Project = (function () {
         function Project() {
@@ -192,7 +194,7 @@ define("model/project", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = Project;
 });
-define("model/project-task", ["require", "exports"], function (require, exports) {
+define("src/ts/model/project-task", ["require", "exports"], function (require, exports) {
     "use strict";
     var ProjectTaskModel = (function () {
         function ProjectTaskModel() {
@@ -202,7 +204,7 @@ define("model/project-task", ["require", "exports"], function (require, exports)
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = ProjectTaskModel;
 });
-define("service/base", ["require", "exports", "util/deferred"], function (require, exports, deferred_1) {
+define("src/ts/service/base", ["require", "exports", "src/ts/util/deferred"], function (require, exports, deferred_1) {
     "use strict";
     var BaseRest = (function () {
         function BaseRest() {
@@ -266,7 +268,7 @@ define("service/base", ["require", "exports", "util/deferred"], function (requir
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = BaseRest;
 });
-define("service/harvest", ["require", "exports", "util/deferred", "model/timer", "model/task", "model/project", "service/base"], function (require, exports, deferred_2, timer_1, task_1, project_1, base_1) {
+define("src/ts/service/harvest", ["require", "exports", "src/ts/util/deferred", "src/ts/model/timer", "src/ts/model/task", "src/ts/model/project", "src/ts/service/base"], function (require, exports, deferred_2, timer_1, task_1, project_1, base_1) {
     "use strict";
     var HarvestService = (function (_super) {
         __extends(HarvestService, _super);
@@ -405,7 +407,7 @@ define("service/harvest", ["require", "exports", "util/deferred", "model/timer",
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = HarvestService;
 });
-define("service/message-handler", ["require", "exports"], function (require, exports) {
+define("src/ts/service/message-handler", ["require", "exports"], function (require, exports) {
     "use strict";
     var MessageHandler = (function () {
         function MessageHandler(key) {
@@ -444,7 +446,7 @@ define("service/message-handler", ["require", "exports"], function (require, exp
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = MessageHandler;
 });
-define("app", ["require", "exports", "service/message-queue", "service/options", "service/harvest", "service/message-handler"], function (require, exports, message_queue_1, options_1, harvest_1, message_handler_1) {
+define("src/ts/app", ["require", "exports", "src/ts/service/message-queue", "src/ts/service/options", "src/ts/service/harvest", "src/ts/service/message-handler"], function (require, exports, message_queue_1, options_1, harvest_1, message_handler_1) {
     "use strict";
     var queue = new message_queue_1.default();
     var options = new options_1.default('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
@@ -538,7 +540,7 @@ define("app", ["require", "exports", "service/message-queue", "service/options",
         });
     });
 });
-define("util/utils", ["require", "exports"], function (require, exports) {
+define("src/ts/util/utils", ["require", "exports"], function (require, exports) {
     "use strict";
     var Utils = (function () {
         function Utils() {

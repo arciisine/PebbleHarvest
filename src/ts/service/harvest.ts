@@ -16,7 +16,7 @@ export default class HarvestService extends BaseService {
     
     //Memoize  
     ['getTasks' ,'getTaskMap','getProjects','getProjectMap','getProjectTasks','getRecentProjectTaskMap']
-      .forEach(fn => { this[fn] = this.memoize(this[fn], fn); });  
+      //.forEach(fn => { this[fn] = this.memoize(this[fn], fn); });  
   }
   
   options:OptionService;  

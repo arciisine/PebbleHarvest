@@ -5,11 +5,11 @@ import MessageHandler from './service/message-handler';
 
 import ProjectModel from './model/project';
 
-var queue = new MessageQueue();
-var options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
-var harvest = new HarvestService(options);
-var handler = new MessageHandler('Action');
-
+let queue = new MessageQueue();
+let options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
+let harvest = new HarvestService(options);
+let handler = new MessageHandler('Action');
+  
 handler.onError = function(e) {
   console.log(e);
   queue.push({

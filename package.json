@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build" : "./node_modules/.bin/tsc -p .; cat src/js/app-template.js | sed -e '/\"BODY\"/ r src/js/app-body.js' > src/js/pebble-js-app.js",
+    "pwd": "echo `pwd`",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,8 +20,5 @@
   "homepage": "https://github.com/timothysoehnlin/PebbleHarvest#readme",
   "devDependencies": {
     "typescript": "^1.8.0-dev.20160106"
-  },
-  "dependencies": {
-    "systemjs": "^0.19.12"
   }
 }
