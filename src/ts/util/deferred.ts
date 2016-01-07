@@ -9,9 +9,14 @@ export class Deferred<T> {
   _resolved:T = undefined;
   _rejected:any = undefined;
   
+  constructor() {
+    this.resolve = this.resolve.bind(this);
+    this.reject = this.reject.bind(this);
+  }
+  
   promise():Promise<T> {
-    return {
-      then : (succ:(T)=>void, fail?:(any)=>void):void =>{
+    let prom = {
+      then : (succ:(T)=>void, fail?:(any)=>void):Promise<T> =>{
         if (succ) {
           if (this._resolved !== undefined) {
             succ(this._resolved)
@@ -24,11 +29,14 @@ export class Deferred<T> {
           if (this._rejected !== undefined) {
             fail(this._rejected);
           } else {
-            this._failure.push(succ);
+            this._failure.push(fail);
           }
         }
+        return prom;
       }
     }
+    
+    return prom;
   }
   
   resolve(data:T):Deferred<T> {

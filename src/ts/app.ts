@@ -2,34 +2,38 @@ import MessageQueue from './service/message-queue';
 import OptionService from './service/options';
 import HarvestService from './service/harvest';
 import MessageHandler from './service/message-handler';
+import {message} from './service/message-handler';
 
 import ProjectModel from './model/project';
 
 let queue = new MessageQueue();
 let options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
 let harvest = new HarvestService(options);
-let handler = new MessageHandler('Action');
+
+export default class App extends MessageHandler {
   
-handler.onError = function(e) {
-  console.log(e);
-  queue.push({
-    Action : "Error",
-  });
-}
-
-handler.register({
-  /*function fetchRecentAssignemnts(success, failure) {  
-    rest('GET', '/daily/' + utils.dayOfYear() + '/' + new Date().getFullYear(), function(assignments) {
-      assignments.day_entries.map(function(x) {
-        return {
-          projectId : x.project_id,
-          taskId : x.task_id
-        };
+  constructor() {
+    super('Action');
+        
+    Pebble.addEventListener('ready', function(e) {
+      options.set('token.domain', 'eaiti');
+      options.set('oauth.access_token', 'MTpKXuAags1iN6tL-5W1tjVDPbIEc6vL_-HshDfhTqxpechFkU4O6qDdsRYyunsikToppK1kavznTx49wogvBw');
+      
+      queue.push({
+        Action : 'ready'
       });
-    }, failure);
-  }*/
+    });
+  }
 
-  'project-list' : function(data:Pebble.MessagePayload, err) {
+  onError(e) {
+    console.log("Error: ",e);
+    queue.push({
+      Action : "Error",
+    });  
+  }
+ 
+  @message('project-list')
+  projectList(data:Pebble.MessagePayload, err) {
     harvest.getRecentProjectTaskMap()
       .then(recent => {
         harvest.getProjects().then(queue.pusher((p:ProjectModel):any => {
@@ -41,9 +45,11 @@ handler.register({
           };
         }), err);
     }, err);
-  },
-  'timer-list' : function(data:Pebble.MessagePayload, err) {
-    harvest.getTimers().then(items => {      
+  }
+  
+  @message('timer-list')
+  timerList(data:Pebble.MessagePayload, err) {
+    harvest.getTimers().then(items => {
       items.forEach(t => {
         queue.push([{
           Action : "timer-add-begin",
@@ -62,29 +68,34 @@ handler.register({
         }])
       });
     }, err);
-  },
-  'project-tasks' : function(data, err) {
+  }
+  @message('project-tasks') 
+  projectTasks(data:Pebble.MessagePayload, err) {
     harvest.getRecentProjectTaskMap().then(function(recent) {
-      harvest.getProjectTasks(data.Project).then(queue.pusher(function(t) {
+      harvest.getProjectTasks(data['Project'] as number).then(queue.pusher(function(t) {
         return {
           Action : 'project-task-added',  
           Task : t.id, 
-          Active : recent[data.Project][t.id] !== undefined,
+          Active : recent[data['Project'] as number][t.id] !== undefined,
           Name : t.name 
         };
       }), err);
     }, err);
-  },
-  'timer-add' : function(data, err) {
-    harvest.createTimer(data.Project, data.Task).then(queue.pusher(function(timer) {
+  }
+  
+  @message('timer-add') 
+  timerAdd(data:Pebble.MessagePayload, err) {
+    harvest.createTimer(data['Project'] as number, data['Task'] as number).then(queue.pusher(function(timer) {
       return { 
         Action : 'timer-list-reload', 
         Timer : timer.id 
       };
     }), err);
-  },
-  'timer-toggle' : function(data, err) {
-    harvest.toggleTimer(data.Timer).then(queue.pusher(function(timer) {
+  }
+  
+  @message('timer-toggle')
+  toggleTimer(data:Pebble.MessagePayload, err) {
+    harvest.toggleTimer(data['Timer'] as number).then(queue.pusher(function(timer) {
       return {
         Action : 'timer-list-reload',
         Timer : timer.id,
@@ -92,11 +103,4 @@ handler.register({
       };
     }), err);
   }
-});
-
-Pebble.addEventListener('ready', function(e) {
-  options.set('access_token', 'f8NAb9sXnWJ7jiN9xaClMswBk9VmpZCnpzHDD8ETVj5AuFFlYDPkmdireKiDoZFxqcysOBAFu119bTPz67S');
-  queue.push({
-    Action : 'ready'
-  });
-});
+}

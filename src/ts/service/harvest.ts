@@ -1,4 +1,5 @@
 import {Deferred, Promise} from '../util/deferred';
+import memoize from '../util/memoize';
 
 import TimerModel from '../model/timer';
 import TaskModel from '../model/task';
@@ -11,12 +12,7 @@ import OptionService from './options';
 export default class HarvestService extends BaseService {
   constructor(options:OptionService) {
     super();
-    
     this.options = options;
-    
-    //Memoize  
-    ['getTasks' ,'getTaskMap','getProjects','getProjectMap','getProjectTasks','getRecentProjectTaskMap']
-      //.forEach(fn => { this[fn] = this.memoize(this[fn], fn); });  
   }
   
   options:OptionService;  
@@ -31,6 +27,8 @@ export default class HarvestService extends BaseService {
     let def = new Deferred<TimerModel>();
     
     this.get('/daily').then(assignments => {
+      console.log(JSON.stringify(assignments));   
+      
       let active = assignments.day_entries
         .map(a => {
           a.updated_at = Date.parse(a.updated_at);
@@ -99,6 +97,7 @@ export default class HarvestService extends BaseService {
     return this.post('/daily/timer/'+entryId);
   }
   
+  @memoize()
   getTasks():Promise<TaskModel[]> {
     let def = new Deferred<TaskModel[]>();
     
@@ -119,10 +118,12 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }
   
+  @memoize()
   getTaskMap():Promise<{[key:string]:TaskModel}> {
     return this.listToMap(this.getTasks(), 'id');
   }
   
+  @memoize()
   getProjects():Promise<ProjectModel[]> {
     let def = new Deferred<ProjectModel[]>();
     
@@ -144,6 +145,7 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }  
   
+  @memoize()
   getProjectMap():Promise<{[key:string]:ProjectModel}> {
     this.getProjects().then(function(data:ProjectModel[]) {
       
@@ -151,6 +153,7 @@ export default class HarvestService extends BaseService {
     return this.listToMap(this.getProjects(), 'id');
   }
   
+  @memoize()
   getProjectTasks(projectId:number):Promise<ProjectTaskModel[]> {
     let def = new Deferred<ProjectTaskModel[]>();
     

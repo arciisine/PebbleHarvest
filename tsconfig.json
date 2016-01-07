@@ -1,9 +1,12 @@
 {
+  "exclude": ["node_modules"],
   "compilerOptions": {
+    "experimentalDecorators": true,
     "target" : "es5",
     "module" : "amd",
     "outDir": "src/js",
     "outFile":"src/js/app-body.js",
-    "rootDir": "src/ts" 
+    "rootDir": "src/ts",
+    "emitDecoratorMetadata": true
   }
 }

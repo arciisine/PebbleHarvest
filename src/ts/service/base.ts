@@ -2,8 +2,6 @@ import {Deferred, Promise} from '../util/deferred';
 
 export default class BaseRest {
   
-  _memoizeCache:{[key:string]:any} = {};
-  
   exec(method:string, url:string, body?:string):Promise<{}> {
     let def = new Deferred();  
     let req = new XMLHttpRequest();
@@ -23,6 +21,8 @@ export default class BaseRest {
     req.onerror = def.reject;
     
     body = body ? JSON.stringify(body) : null
+    
+    console.log(`Rest call: ${method} ${url}`)
     
     req.send(body);
     
@@ -48,24 +48,4 @@ export default class BaseRest {
     
     return def.promise();
   }
-  
-  memoize<T>(fn:()=>Promise<T>, name?:string):(any?) => Promise<T> {
-   name = name || 'Key' + Math.random();
-   let self = this;
-   
-  return function() {
-    let args = Array.prototype.slice.call(arguments, 0);
-    let key = [name].concat(args).join('||');
-    
-    if (key in self._memoizeCache) {
-      return new Deferred<T>().resolve(self._memoizeCache[key]).promise();
-    }
-    
-    return fn.apply(self, args)
-      .then(data => {
-        console.log("Caching", key, data);
-        self._memoizeCache[key] = data;
-      });
-    }
-  };
 }
