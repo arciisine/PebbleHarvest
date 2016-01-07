@@ -1,0 +1,25 @@
+{
+  "name": "pebble-harvest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timothysoehnlin/PebbleHarvest.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/timothysoehnlin/PebbleHarvest/issues"
+  },
+  "homepage": "https://github.com/timothysoehnlin/PebbleHarvest#readme",
+  "devDependencies": {
+    "typescript": "^1.8.0-dev.20160106"
+  },
+  "dependencies": {
+    "systemjs": "^0.19.12"
+  }
+}
