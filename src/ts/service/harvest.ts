@@ -61,6 +61,7 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }
   
+  @memoize()
   getRecentProjectTaskMap():Promise<{[key:string]:{[key:string]:boolean}}> {
     let def = new Deferred<{[key:string]:{[key:string]:boolean}}>();
       
@@ -112,6 +113,8 @@ export default class HarvestService extends BaseService {
           return out;
         });
       
+      console.log("Tasks", JSON.stringify(models));
+      
       def.resolve(models);
     }, def.reject);
     
@@ -157,7 +160,7 @@ export default class HarvestService extends BaseService {
   getProjectTasks(projectId:number):Promise<ProjectTaskModel[]> {
     let def = new Deferred<ProjectTaskModel[]>();
     
-    this.getTaskMap().then(tasks => { 
+    this.getTaskMap().then(tasks => {
       this.get('/projects/' + projectId + '/task_assignments').then(taskProjects => {
         if (taskProjects && taskProjects.length) {
           taskProjects

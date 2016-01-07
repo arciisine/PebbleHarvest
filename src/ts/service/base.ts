@@ -42,7 +42,7 @@ export default class BaseRest {
     
     promise.then(data => {
         let out:{[key:string]:T} = {};
-        data.forEach(x => out[x[keyProp]] = x);    
+        data.forEach(x => out[x[keyProp]] = x);
         def.resolve(out);
       }, def.reject);
     

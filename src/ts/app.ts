@@ -6,20 +6,24 @@ import {message} from './service/message-handler';
 
 import ProjectModel from './model/project';
 
-let queue = new MessageQueue();
-let options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
-let harvest = new HarvestService(options);
-
 export default class App extends MessageHandler {
-  
+
+  queue:MessageQueue;
+  options:OptionService;
+  harvest:HarvestService;
+
   constructor() {
     super('Action');
+
+    this.queue = new MessageQueue();
+    this.options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
+    this.harvest = new HarvestService(this.options);
         
-    Pebble.addEventListener('ready', function(e) {
-      options.set('token.domain', 'eaiti');
-      options.set('oauth.access_token', 'MTpKXuAags1iN6tL-5W1tjVDPbIEc6vL_-HshDfhTqxpechFkU4O6qDdsRYyunsikToppK1kavznTx49wogvBw');
+    Pebble.addEventListener('ready', () => {
+      this.options.set('token.domain', 'eaiti');
+      this.options.set('oauth.access_token', 'MTpKXuAags1iN6tL-5W1tjVDPbIEc6vL_-HshDfhTqxpechFkU4O6qDdsRYyunsikToppK1kavznTx49wogvBw');
       
-      queue.push({
+      this.queue.push({
         Action : 'ready'
       });
     });
@@ -27,16 +31,16 @@ export default class App extends MessageHandler {
 
   onError(e) {
     console.log("Error: ",e);
-    queue.push({
+    this.queue.push({
       Action : "Error",
     });  
   }
  
   @message('project-list')
   projectList(data:Pebble.MessagePayload, err) {
-    harvest.getRecentProjectTaskMap()
+    this.harvest.getRecentProjectTaskMap()
       .then(recent => {
-        harvest.getProjects().then(queue.pusher((p:ProjectModel):any => {
+        this.harvest.getProjects().then(this.queue.pusher((p:ProjectModel):any => {
           return { 
             Action : 'project-added',
             Project : p.id,
@@ -49,9 +53,9 @@ export default class App extends MessageHandler {
   
   @message('timer-list')
   timerList(data:Pebble.MessagePayload, err) {
-    harvest.getTimers().then(items => {
+    this.harvest.getTimers().then(items => {
       items.forEach(t => {
-        queue.push([{
+        this.queue.push([{
           Action : "timer-add-begin",
           Timer : t.id,
           Project : t.projectId,
@@ -71,8 +75,8 @@ export default class App extends MessageHandler {
   }
   @message('project-tasks') 
   projectTasks(data:Pebble.MessagePayload, err) {
-    harvest.getRecentProjectTaskMap().then(function(recent) {
-      harvest.getProjectTasks(data['Project'] as number).then(queue.pusher(function(t) {
+    this.harvest.getRecentProjectTaskMap().then((recent) => {
+      this.harvest.getProjectTasks(data['Project'] as number).then(this.queue.pusher((t) => {
         return {
           Action : 'project-task-added',  
           Task : t.id, 
@@ -85,7 +89,7 @@ export default class App extends MessageHandler {
   
   @message('timer-add') 
   timerAdd(data:Pebble.MessagePayload, err) {
-    harvest.createTimer(data['Project'] as number, data['Task'] as number).then(queue.pusher(function(timer) {
+    this.harvest.createTimer(data['Project'] as number, data['Task'] as number).then(this.queue.pusher((timer) => {
       return { 
         Action : 'timer-list-reload', 
         Timer : timer.id 
@@ -95,7 +99,7 @@ export default class App extends MessageHandler {
   
   @message('timer-toggle')
   toggleTimer(data:Pebble.MessagePayload, err) {
-    harvest.toggleTimer(data['Timer'] as number).then(queue.pusher(function(timer) {
+    this.harvest.toggleTimer(data['Timer'] as number).then(this.queue.pusher((timer) => {
       return {
         Action : 'timer-list-reload',
         Timer : timer.id,
