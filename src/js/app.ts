@@ -17,8 +17,6 @@ handler.onError = function(e) {
   });
 }
 
-type MessagePayload = {[key:string]:string|number};
-
 handler.register({
   /*function fetchRecentAssignemnts(success, failure) {  
     rest('GET', '/daily/' + utils.dayOfYear() + '/' + new Date().getFullYear(), function(assignments) {
@@ -31,7 +29,7 @@ handler.register({
     }, failure);
   }*/
 
-  'project-list' : (data:MessagePayload):void => {
+  'project-list' : function(data:Pebble.MessagePayload, err) {
     harvest.getRecentProjectTaskMap()
       .then(recent => {
         harvest.getProjects().then(queue.pusher((p:ProjectModel):any => {
@@ -41,13 +39,13 @@ handler.register({
             Active: recent[p.id] !== undefined,
             Name : p.name 
           };
-        }), this.onError);
-    }, , this.onError);
-  }/*,
-  'timer-list' : function(data, err) {
-    harvest.getTimers().then(function(items) {      
-      items.forEach(function(t) {
-        queue.push({
+        }), err);
+    }, err);
+  },
+  'timer-list' : function(data:Pebble.MessagePayload, err) {
+    harvest.getTimers().then(items => {      
+      items.forEach(t => {
+        queue.push([{
           Action : "timer-add-begin",
           Timer : t.id,
           Project : t.projectId,
@@ -61,7 +59,7 @@ handler.register({
           Name : t.taskTitle
         }, {
           Action : "timer-add-complete"
-        })
+        }])
       });
     }, err);
   },
@@ -93,7 +91,7 @@ handler.register({
         Active : !timer.ended_at && !!timer.timer_started_at
       };
     }), err);
-  }*/
+  }
 });
 
 Pebble.addEventListener('ready', function(e) {

@@ -1,11 +1,9 @@
-type Message = {[key:string]:(string|number|boolean)};
-
 export default class MessageQueue {
   constructor() {
     ['_iterateSuccess' ,'_iterateFailure', 'push'].forEach(key => { this[key] = this[key].bind(this); })
   }
  
- _queue:Array<Message> = [];
+ _queue:Array<Pebble.MessagePayload> = [];
  _active:boolean = false;
  
   _iterateSuccess():void {
@@ -26,10 +24,10 @@ export default class MessageQueue {
     
     let out = this._queue[0];    
     console.log("Dequeued", out['Action'], JSON.stringify(out));
-    Pebble.sendAppMessage(out, this._iterateSuccess, this._iterateFailure);;
+    Pebble.sendAppMessage(out, this._iterateSuccess, this._iterateFailure);
   }
   
-  push(data:Message|Message[]):void {
+  push(data:Pebble.MessagePayload|Pebble.MessagePayload[]):void {
     //Add all
     if (!Array.isArray(data)) {
       this._queue.push(data);      
@@ -45,7 +43,7 @@ export default class MessageQueue {
     }
   }
   
-  pusher(fn:(any)=>Message):(any)=>void {
+  pusher(fn:(any)=>Pebble.MessagePayload):(any)=>void {
     return (data:any|any[]) => {
       let arr:any[] = Array.isArray(data) ? data : [data];
       this.push(arr.map(fn));
