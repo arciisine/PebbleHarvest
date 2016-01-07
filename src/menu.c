@@ -2,6 +2,7 @@
 #include "menu.h"
 
 #define CELL_HEIGHT 30
+#define BASIC_CELL_HEIGHT 48
 #define CELL_PADDING 3
 #define ICON_HEIGHT (CELL_HEIGHT - 5)
 #define TITLE_HEIGHT 20
@@ -56,12 +57,19 @@ void menu_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t section_i
 }
 
 int16_t menu_cell_height(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {
-  return CELL_HEIGHT;
+  Menu* menu = (Menu*) callback_context;
+  return menu->basic_render ? BASIC_CELL_HEIGHT : CELL_HEIGHT;
 }
 
 void menu_draw_row(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
   Menu* menu = (Menu*) data;
   MenuItem* item = menu->sections[cell_index->section]->items[cell_index->row];
+  
+  if (menu->basic_render) {
+    menu_cell_basic_draw(ctx, cell_layer, item->title, item->subtitle, item->icon);
+    return;
+  }
+  
   //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw row: %p, %p", menu, item);
   GRect bounds = layer_get_frame(cell_layer);
  

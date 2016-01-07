@@ -18,6 +18,17 @@
     "Active" : 5
   },
   "resources": {
-    "media": []
+    "media": [      
+      {
+        "type": "bitmap",
+        "name": "CHECK_ACTIVE",
+        "file": "images/check-active.png"
+      },
+      {
+        "type": "bitmap",
+        "name": "CHECK_INACTIVE",
+        "file": "images/check-inactive.png"
+      }
+    ]
   }
 }

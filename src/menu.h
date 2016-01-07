@@ -18,6 +18,7 @@ typedef struct MenuSection {
 } MenuSection;
 
 typedef struct Menu {
+  bool basic_render;
   Window* window;
   char* title;
   TextLayer* title_layer;
