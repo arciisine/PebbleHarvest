@@ -1,6 +1,11 @@
-//*****************************************************************
-//UTILS
-//*****************************************************************var queue = new MessageQueue();
+import MessageQueue from './service/message-queue';
+import OptionService from './service/options';
+import HarvestService from './service/harvest';
+import MessageHandler from './service/message-handler';
+
+import ProjectModel from './model/project';
+
+var queue = new MessageQueue();
 var options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
 var harvest = new HarvestService(options);
 var handler = new MessageHandler('Action');
@@ -11,6 +16,8 @@ handler.onError = function(e) {
     Action : "Error",
   });
 }
+
+type MessagePayload = {[key:string]:string|number};
 
 handler.register({
   /*function fetchRecentAssignemnts(success, failure) {  
@@ -24,19 +31,19 @@ handler.register({
     }, failure);
   }*/
 
-  'project-list' : function(data, err) {
+  'project-list' : (data:MessagePayload):void => {
     harvest.getRecentProjectTaskMap()
-      .then(function(recent) {
-        harvest.getProjects().then(queue.pusher(function(p) {
+      .then(recent => {
+        harvest.getProjects().then(queue.pusher((p:ProjectModel):any => {
           return { 
             Action : 'project-added',
             Project : p.id,
             Active: recent[p.id] !== undefined,
             Name : p.name 
           };
-        }), err);
-    }, err);
-  },
+        }), this.onError);
+    }, , this.onError);
+  }/*,
   'timer-list' : function(data, err) {
     harvest.getTimers().then(function(items) {      
       items.forEach(function(t) {
@@ -86,7 +93,7 @@ handler.register({
         Active : !timer.ended_at && !!timer.timer_started_at
       };
     }), err);
-  }
+  }*/
 });
 
 Pebble.addEventListener('ready', function(e) {
