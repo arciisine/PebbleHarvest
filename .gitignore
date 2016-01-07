@@ -5,4 +5,5 @@ build
 # Ignore waf lock file
 .lock-waf*
 
-src/js
+src/js/**/*
+node_modules/**/*
