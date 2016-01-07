@@ -158,16 +158,11 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 }
 
 
-static void window_load(Window *window) {
-  Layer *window_layer = window_get_root_layer(window);
-  GRect bounds = layer_get_bounds(window_layer);
+static void main_menu_load(Window *window) {
+    
+  checkmark_active = gbitmap_create_with_resource(RESOURCE_ID_CHECK_ACTIVE);
+  checkmark_inactive = gbitmap_create_with_resource(RESOURCE_ID_CHECK_INACTIVE);
   
-  timer_menu = menu_create("Timers");
-  timer_menu->click = timer_select_handler;
-  timer_list = menu_add_section(timer_menu, NULL)->id;
-  timer_actions = menu_add_section(timer_menu, NULL)->id;
-  timer_menu->basic_render = true;
-
   project_menu = menu_create("Project List");
   project_recent = menu_add_section(project_menu, "Recent")->id;
   project_all = menu_add_section(project_menu, "All")->id;
@@ -179,10 +174,9 @@ static void window_load(Window *window) {
   task_menu->click = task_select_handler;
 }
 
-static void window_unload(Window *window) {
+static void main_menu_unload(Window *window) {
   menu_destroy(project_menu);
   menu_destroy(task_menu);
-  menu_destroy(timer_menu);
 
   gbitmap_destroy(checkmark_active);
   gbitmap_destroy(checkmark_inactive);
@@ -196,19 +190,18 @@ static void init(void) {
   // Init buffers
   app_message_open(120, 120);
   
-  checkmark_active = gbitmap_create_with_resource(RESOURCE_ID_CHECK_ACTIVE);
-  checkmark_inactive = gbitmap_create_with_resource(RESOURCE_ID_CHECK_INACTIVE);
-  
-  window = window_create();
-  window_set_window_handlers(window, (WindowHandlers) {
-    .load = window_load,
-    .unload = window_unload,
-  });
-  window_stack_push(window, true);  
+  timer_menu = menu_create("Timers");
+  timer_menu->click = timer_select_handler;
+  timer_list = menu_add_section(timer_menu, NULL)->id;
+  timer_actions = menu_add_section(timer_menu, NULL)->id;
+  timer_menu->basic_render = true;
+  timer_menu->on_load = main_menu_load;
+  timer_menu->on_unload = main_menu_unload;
+  menu_open(timer_menu);  
 }
 
 static void deinit(void) {
-  window_destroy(window);
+  menu_destroy(timer_menu);
 }
 
 int main(void) {

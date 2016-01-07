@@ -29,6 +29,8 @@ typedef struct Menu {
   int item_count;
   MenuLayer* layer;
   void (*click)(MenuItem*, bool);
+  void (*on_load)(Window* window);
+  void (*on_unload)(Window* window);
 } Menu;
 
 Menu* menu_create(char* title);

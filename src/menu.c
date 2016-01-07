@@ -157,12 +157,19 @@ void menu_window_load(Window* window) {
   Menu* menu = (Menu*) window_get_user_data(window);
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window loaded: %p, %p", menu, menu->parent);
+  
+  if (menu->on_load) {
+    menu->on_load(menu->window);
+  }
 }
 
 void menu_window_unload(Window* window) {
   Menu* menu = (Menu*) window_get_user_data(window);
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window unloaded: %p, %p", menu, menu->parent);
+  if (menu->on_unload) {
+    menu->on_unload(menu->window);
+  }
 }
 
 MenuItem* menu_get_selected_item(Menu* menu) {

@@ -157,18 +157,26 @@ export default class HarvestService extends BaseService {
   }
   
   @memoize()
-  getProjectTasks(projectId:number):Promise<ProjectTaskModel[]> {
-    let def = new Deferred<ProjectTaskModel[]>();
+  getProjectTasks(projectId:number):Promise<TaskModel[]> {
+    let def = new Deferred<TaskModel[]>();
     
-    this.getTaskMap().then(tasks => {
-      this.get('/projects/' + projectId + '/task_assignments').then(taskProjects => {
-        if (taskProjects && taskProjects.length) {
-          taskProjects
-            .map(x => tasks[x.task_assignment.task_id])
+    this.getTaskMap().then(taskMap => {
+      this.get('/projects/' + projectId + '/task_assignments').then(tp => {
+        let models:TaskModel[] = null;
+        if (tp && tp.length) {
+          models = tp
+            .map(x => taskMap[x.task_assignment.task_id])
             .filter(x => !!x)
-            .sort((a,b) => a.is_default ? -1 : a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-        }
-        def.resolve(taskProjects);                      
+            .sort((a,b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+            
+          for (let i = 0; i < models.length;i++) {
+            if (models[i].is_default) {
+              models.unshift.apply(models, models.splice(i,1));
+              break;
+            }
+          }
+        }        
+        def.resolve(models);                      
       }, def.reject);
     }, def.reject);
     
