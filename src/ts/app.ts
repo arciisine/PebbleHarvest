@@ -113,7 +113,7 @@ export default class App extends MessageHandler {
         this.harvest.getProjectTasks(data[AppKey.Project] as number), 
         (t:TaskModel) => Utils.buildMap(
           AppKey.Task,  t.id, 
-          AppKey.Active, recent[data[AppKey.Project] as number][t.id] !== undefined,
+          AppKey.Active, (recent[data[AppKey.Project] as number] || {})[t.id] !== undefined,
           AppKey.Name, t.name 
         ));
     });

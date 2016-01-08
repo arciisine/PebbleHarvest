@@ -5,7 +5,7 @@
     "target" : "es5",
     "module" : "amd",
     "outDir": "src/js",
-    "outFile":"src/js/app-body.js",
+    "outFile" : "tmp/out.js",
     "rootDir": "src/ts",
     "emitDecoratorMetadata": true
   }

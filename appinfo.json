@@ -1,8 +1,8 @@
 {
   "uuid": "012bed8a-a42e-4369-9648-044af22f3332",
-  "shortName": "PebbleHarvest",
-  "longName": "PebbleHarvest",
-  "companyName": "MakeAwesomeHappen",
+  "shortName": "Harvest",
+  "longName": "Harvest Time Tracking",
+  "companyName": "ArcSine Technologies",
   "versionLabel": "1.0",
   "sdkVersion": "3",
   "capabilities" : [

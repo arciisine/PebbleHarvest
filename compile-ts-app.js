@@ -1,4 +1,7 @@
-(function setupRegister() {
+let child_process = require('child_process');
+let fs = require('fs');
+
+function register(window) {
   var loaded = { require : function() {} };
   var registry = { require : [] };
   
@@ -32,10 +35,24 @@
   window.require = imp
   window.define = register;
   window.module = { exports : {} };
-})()
+}
 
-"BODY"; 
+function init(req) {
+  req(['app'], function(app) { new app.default(); });;
+}
 
-require(['app'], function(app) {
-  new app.default();
-});
+//Compile
+child_process.execSync('./node_modules/.bin/tsc -p . --outFile ./tmp/out.js');
+
+//Read
+let source = fs.readFileSync('./tmp/out.js');
+fs.unlinkSync('./tmp/out.js');
+
+try { fs.mkdirSync('src/js'); } catch(e) {}
+
+//Final
+fs.writeFileSync('src/js/pebble-js-app.js', 
+`register(window); 
+${source}; 
+init(window.require); 
+${[init, register].map(x=>x.toString()).join(';\n')}`);

@@ -71,10 +71,9 @@ export default class HarvestService extends BaseService {
       
     this.get('/daily').then(assignments => {
       let recent:{[key:string]:{[key:string]:boolean}} = {};
-      function addProjectTask(projectid, taskid) {
-        if (!recent[projectid]) {
-          recent[projectid] = {};
-        }
+      
+      let addProjectTask = (projectid, taskid) => {
+        if (!recent[projectid]) recent[projectid] = {};
         recent[projectid][taskid] = true;
       }
       

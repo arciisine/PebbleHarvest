@@ -194,6 +194,7 @@ MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
   section->item_count += 1;
   
   menu_layer_reload_data(menu->layer);
+  
   return copy;  
 }
 
