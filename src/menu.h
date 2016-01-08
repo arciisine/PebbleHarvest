@@ -36,6 +36,7 @@ typedef struct Menu {
 
 Menu* menu_create(char* title);
 MenuItem* menu_get_selected_item(Menu* menu);
+void menu_force_selection_change_on_current(Menu* menu);
 void menu_destroy(Menu* menu);
 void menu_close(Menu* menu);
 void menu_open(Menu* menu);

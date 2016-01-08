@@ -9,30 +9,26 @@
 #define HEADER_HEIGHT 20
 #define PROXY_HANDLER(M,PROP) if (M->window_handlers.PROP != NULL) { M->window_handlers.PROP (M->window); }
 
-#define SCROLL_MENU_ITEM_WAIT_TIMER 2000
-#define SCROLL_MENU_ITEM_TIMER 10
+#define SCROLL_MENU_ITEM_WAIT_TIMER 1000
+#define SCROLL_MENU_ITEM_TIMER 125
 
 static void menu_scroll_callback(void* data) {
   Menu* menu = (Menu*)data;
-  menu->scroll_timer = NULL;
   
   int w = layer_get_frame(menu->parent).size.w;
   
   MenuItem* item = menu_get_selected_item(menu);
-  
-  if (((item->size.w - item->scroll_offset) - w + 20) < 0) {
-    if (item->scroll_offset == 0) {
-      return;
-    } else {
-      item->scroll_offset = 0;
-    }
+
+  if ((((item->size.w - item->scroll_offset) - w) + 5) < 0) {
+    item->scroll_offset = 0;
+    menu->scroll_timer = NULL;  
+    return;
   } else {  
     item->scroll_offset+=5;
   }
   
   
   // Redraw the menu with this scroll offset
-  
   menu_layer_reload_data(menu->layer);
   menu->scroll_timer = app_timer_register(SCROLL_MENU_ITEM_TIMER, menu_scroll_callback, menu);
 }
@@ -42,12 +38,12 @@ static void menu_initiate_scroll_timer(Menu* menu) {
   
   bool need_to_create_timer = true;
   
-  if(menu->scroll_timer) {
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Rescheduling timer");
+  if (menu->scroll_timer) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Rescheduling timer");
     need_to_create_timer = !app_timer_reschedule(menu->scroll_timer, SCROLL_MENU_ITEM_WAIT_TIMER);
   }
   if(need_to_create_timer) {
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Creating timer");
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Creating timer");
     menu->scroll_timer = app_timer_register(SCROLL_MENU_ITEM_WAIT_TIMER, menu_scroll_callback, menu);
   }
 }
@@ -248,6 +244,11 @@ void menu_window_disappear(Window* window) {
   Menu* menu = (Menu*) window_get_user_data(window);
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window disappear: %p, %p", menu, menu->parent);
+  if (menu->scroll_timer != NULL) {
+    menu_get_selected_item(menu)->scroll_offset = 0;
+    app_timer_cancel(menu->scroll_timer);
+  }
+  
   PROXY_HANDLER(menu, disappear);
 }
 
@@ -260,21 +261,31 @@ void menu_set_title(Menu* menu, char* title) {
   free_and_clear(menu->title);
   menu->title = strdup(title);
   text_layer_set_text(menu->title_layer, menu->title);
-  //layer_mark_dirty(text_layer_get_layer(menu->title_layer));
+  layer_mark_dirty(text_layer_get_layer(menu->title_layer));
 } 
 
 void menu_selection_changed(struct MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *callback_context) {
+  
+}
+
+void menu_selection_will_change(struct MenuLayer *menu_layer, MenuIndex* new_index, MenuIndex old_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
   MenuItem* item = menu->sections[old_index.section]->items[old_index.row];
   item->scroll_offset = 0;
   
-  item = menu->sections[new_index.section]->items[new_index.row];
-  if (item->size.w > 144) {
+  item = menu->sections[new_index->section]->items[new_index->row];
+  if (item->size.w > 100) {
     menu_initiate_scroll_timer(menu);
-  } else {
+  } else if (menu->scroll_timer) {
     app_timer_cancel(menu->scroll_timer);
+    menu->scroll_timer = NULL;
   }
 }
+
+void menu_force_selection_change_on_current(Menu* menu) {
+  MenuIndex index = menu_layer_get_selected_index(menu->layer);
+  menu_selection_will_change(menu->layer, &(MenuIndex) {index.section, index.row}, index,  menu);
+} 
 
 Menu* menu_create(char* title) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Initializing menu");
@@ -328,6 +339,7 @@ Menu* menu_create(char* title) {
     .draw_row = menu_draw_row,
     .draw_header = menu_draw_header,
     .selection_changed = menu_selection_changed,
+    .selection_will_change = menu_selection_will_change,
     .select_click = menu_select_click,
     .select_long_click = menu_select_long_click
   });

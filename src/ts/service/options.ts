@@ -45,6 +45,7 @@ export default class OptionService {
   }
 
   putAll(obj:{}):void {
+    this._data = {};
     for (var k in obj) {
       this._data[k] = obj[k];
     }

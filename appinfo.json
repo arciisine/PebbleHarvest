@@ -5,6 +5,9 @@
   "companyName": "MakeAwesomeHappen",
   "versionLabel": "1.0",
   "sdkVersion": "3",
+  "capabilities" : [
+    "configurable"
+  ],
   "targetPlatforms": ["aplite", "basalt"],
   "watchapp": {
     "watchface": false

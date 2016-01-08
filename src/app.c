@@ -30,10 +30,9 @@ static char* OLDER_SECTION_TITLE = "Older";
 static char* LOADING_TEXT = "Loading ...";
 static char* EMPTY_TEXT = "No Items Found";
 
-static MenuItem ADD_TASK_ITEM = {
-  .title = "Add Task",
-  .id = -2
-};
+static bool menu_is_empty(Menu* menu, Sections sections) {
+   return menu->sections[sections.alternate]->item_count == 0 && menu->sections[sections.primary]->item_count == 0 ;
+}
 
 static bool send_message(Action action, int count, ...) {
   va_list argp;
@@ -63,13 +62,10 @@ static bool send_message(Action action, int count, ...) {
 }
 
 static void menu_set_status(Menu* menu, uint16_t section_id, char* status) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Setting Status: %s", status);
   free_and_clear(menu->sections[section_id]->title);
-  if (status) {
-    menu->sections[section_id]->title = strdup(status);
-    menu->sections[section_id]->always_show = true;
-  } else {
-    menu->sections[section_id]->always_show = false;
-  }
+  menu->sections[section_id]->title = strdup(status);
+  menu->sections[section_id]->always_show = status != NULL; 
   menu_layer_reload_data(menu->layer);
 }
 
@@ -88,10 +84,7 @@ static void message_show(char* text) {
 }
 
 static void project_menu_open() {
-  if (
-    project_menu->sections[project_sections.primary]->item_count == 0 &&
-    project_menu->sections[project_sections.alternate]->item_count == 0
-  ) {
+  if (menu_is_empty(project_menu, project_sections)) {
     send_message(ActionProjectListFetch, 0);
     menu_set_status(project_menu, project_sections.status, LOADING_TEXT);  
   }
@@ -165,13 +158,17 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
       break;
       
     case ActionTimerListEnd:
-      if (timer_menu->sections[timer_sections.primary]->item_count == 0 ){
+      if (menu_is_empty(timer_menu, timer_sections)){
         menu_set_status(timer_menu, timer_sections.status, EMPTY_TEXT);
       } else {
         menu_set_status(timer_menu, timer_sections.status, NULL); //Remove loading
       }
       
-      menu_add_item(timer_menu, ADD_TASK_ITEM, timer_sections.alternate);
+      menu_add_item(timer_menu, (MenuItem) {
+        .title = "Add Task",
+        .id = -2,
+        .icon = plus_icon
+      }, timer_sections.alternate);
       break;
       
     default: break;/** do nothing */
@@ -191,15 +188,12 @@ static void on_tasklist_build(DictionaryIterator *iter, Action action) {
       break;
       
     case ActionTaskListEnd:
-      if (
-        task_menu->sections[task_sections.alternate]->item_count == 0 &&
-        task_menu->sections[task_sections.primary]->item_count == 0  
-      ){
+      if (menu_is_empty(task_menu, task_sections)){
         menu_set_status(task_menu, task_sections.status, EMPTY_TEXT);
       } else {
-        menu_set_status(task_menu, task_sections.status, NULL); //Remove loading       
+        menu_set_status(task_menu, task_sections.status, NULL); //Remove loading
+        menu_force_selection_change_on_current(task_menu);       
       }
-
       break;
       
     default: break;/** do nothing */
@@ -219,13 +213,11 @@ static void on_projectlist_build(DictionaryIterator *iter, Action action) {
       break;
       
     case ActionProjectListEnd: 
-      if (
-        project_menu->sections[project_sections.alternate]->item_count == 0 &&
-        project_menu->sections[project_sections.primary]->item_count == 0  
-      ){
+      if (menu_is_empty(project_menu, project_sections)){
          menu_set_status(project_menu, project_sections.status, EMPTY_TEXT);
       } else {
-         menu_set_status(project_menu, project_sections.status, NULL); //Remove loading 
+         menu_set_status(project_menu, project_sections.status, NULL); //Remove loading
+         menu_force_selection_change_on_current(project_menu);
       }
 
       break;
@@ -256,6 +248,10 @@ static void on_message(DictionaryIterator *iter, void *context) {
   
   switch(action) {
     case ActionReady:
+      //Reset for full update
+      menu_empty(timer_menu);
+      menu_empty(project_menu);
+      menu_empty(task_menu);
       timer_menu_open();
       break;
     
@@ -344,8 +340,6 @@ static void init(void) {
   checkmark_inactive = gbitmap_create_with_resource(RESOURCE_ID_CHECK_INACTIVE);
   plus_icon = gbitmap_create_with_resource(RESOURCE_ID_PLUS);   
 
-  ADD_TASK_ITEM.icon = plus_icon;
-  
   //Initialize Message Screen
   message_screen = window_create();
   Layer* root = window_get_root_layer(message_screen);
