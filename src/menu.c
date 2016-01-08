@@ -36,7 +36,7 @@ uint16_t menu_row_count(struct MenuLayer *menu_layer, uint16_t section_index, vo
 int16_t menu_header_height(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
   MenuSection* section = menu->sections[section_index];
-  return (section->title != NULL && (section->item_count > 0 || section->always_show)) ? TITLE_HEIGHT : 0;
+  return (section->title != NULL) ? TITLE_HEIGHT : 0;
 }
 
 uint16_t menu_section_count(struct MenuLayer *menu_layer, void *callback_context) {
