@@ -1,0 +1,41 @@
+
+<!-- saved from url=(0039)http://localhost:8000/config/index.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+        <script src="./index_files/config.js"></script>
+        <script>
+            window.onload = function() {
+                config.optionsToForm(config.readOptions());
+                                          
+                var hash = config.queryParams(window.location.hash);
+                if (hash.access_token) {
+                  hash = config.queryParams(window.location.hash, 'oauth');
+                }
+                if (hash) {
+                  config.optionsToForm(hash);
+                  window.location.hash = '';
+                }
+                config.setRedirectLocation();
+            }
+            window.onbeforeunload = function() {
+              config.writeOptions(config.formToOptions());                                
+            }         
+        </script>
+    </head>
+    <body>
+        <button onclick="config.saveAndClose()">Save</button>
+        <form name="token" method="GET" action="https://eaiti.harvestapp.com/oauth2/authorize">
+            <input type="text" class="option" name="domain" placeholder="example" onchange="config.setFormAction()">
+            <input type="hidden" name="client_id" value="RRWPBGSv4UCC9c2lBd48ug">
+            <input type="hidden" name="state" value="optional-csrf-token">
+            <input type="hidden" name="response_type" value="token">
+            <input type="hidden" name="redirect_uri" value="http://localhost:8000/config/index.html">
+            <button type="submit">Get Token</button>
+        </form>
+        <form name="oauth">
+          <input type="text" readonly="" name="access_token">
+          <input type="text" readonly="" name="expires_in">
+          <input type="text" readonly="" name="state">
+          <input type="text" readonly="" name="token_type">
+        </form>
+    
+</body></html>

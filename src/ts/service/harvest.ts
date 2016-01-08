@@ -20,8 +20,12 @@ export default class HarvestService extends BaseService {
   options:OptionService;  
   
   exec(method:string, path:string, body?:any):Promise<any> {
-    let url = `https://${this.options.get('token.domain')}.harvestapp.com${path}?access_token=${this.options.get('oauth.access_token')}`;
+    let url = `https://api.harvestapp.com${path}?access_token=${this.options.get('oauth.access_token')}`;
     return super.exec(method, url, body);
+  }
+  
+  whoami():Promise<any> {
+    return this.get('/account/who_am_i');
   }
   
   getTimers():Promise<TimerModel> {

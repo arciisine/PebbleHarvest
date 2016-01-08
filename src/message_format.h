@@ -1,29 +1,28 @@
 
 //GENERATED, please run `npm run-script gen-message-format` to update
-#ifndef __TEST__
-#define __TEST__
 #pragma once
 typedef enum {
   ActionReady = 0,
 ActionError = 1,
-ActionProjectListFetch = 2,
-ActionProjectListStart = 3,
-ActionProjectListItem = 4,
-ActionProjectListEnd = 5,
-ActionTaskListFetch = 6,
-ActionTaskListStart = 7,
-ActionTaskListItem = 8,
-ActionTaskListEnd = 9,
-ActionTimerListReload = 10,
-ActionTimerListFetch = 11,
-ActionTimerListStart = 12,
-ActionTimerListEnd = 13,
-ActionTimerListItemStart = 14,
-ActionTimerListItemProjectName = 15,
-ActionTimerListItemTaskName = 16,
-ActionTimerListItemEnd = 17,
-ActionTimerAdd = 18,
-ActionTimerToggle = 19 
+ActionUnauthenticated = 2,
+ActionProjectListFetch = 3,
+ActionProjectListStart = 4,
+ActionProjectListItem = 5,
+ActionProjectListEnd = 6,
+ActionTaskListFetch = 7,
+ActionTaskListStart = 8,
+ActionTaskListItem = 9,
+ActionTaskListEnd = 10,
+ActionTimerListReload = 11,
+ActionTimerListFetch = 12,
+ActionTimerListStart = 13,
+ActionTimerListEnd = 14,
+ActionTimerListItemStart = 15,
+ActionTimerListItemProjectName = 16,
+ActionTimerListItemTaskName = 17,
+ActionTimerListItemEnd = 18,
+ActionTimerAdd = 19,
+ActionTimerToggle = 20 
 } Action;
 
 typedef enum {
@@ -37,6 +36,7 @@ AppKeyActive = 5
 
 const char* ActionNames[] = { "Ready",
 "Error",
+"Unauthenticated",
 "ProjectListFetch",
 "ProjectListStart",
 "ProjectListItem",
@@ -56,4 +56,3 @@ const char* ActionNames[] = { "Ready",
 "TimerAdd",
 "TimerToggle"};
 
-#endif

@@ -17,33 +17,34 @@
     "Name" : 4,
     "Active" : 5
   },
-  "actionKeys" : {
-    "Ready" : 0,
-    "Error" : 1,
+  "actionKeys" : [
+    "Ready",
+    "Error",
+    "Unauthenticated",
     
-    "ProjectListFetch" : 2,
-    "ProjectListStart" : 3,
-    "ProjectListItem" : 4,
-    "ProjectListEnd" : 5,
+    "ProjectListFetch",
+    "ProjectListStart",
+    "ProjectListItem",
+    "ProjectListEnd",
   
-    "TaskListFetch" : 6,
-    "TaskListStart" : 7,
-    "TaskListItem" : 8,
-    "TaskListEnd" : 9,
+    "TaskListFetch",
+    "TaskListStart",
+    "TaskListItem",
+    "TaskListEnd",
   
-    "TimerListReload" : 10,
-    "TimerListFetch" : 11,
-    "TimerListStart" : 12,
-    "TimerListEnd" : 13,
+    "TimerListReload",
+    "TimerListFetch",
+    "TimerListStart",
+    "TimerListEnd",
 
-    "TimerListItemStart" : 14,
-    "TimerListItemProjectName" : 15,
-    "TimerListItemTaskName" : 16,
-    "TimerListItemEnd" : 17,
+    "TimerListItemStart",
+    "TimerListItemProjectName",
+    "TimerListItemTaskName",
+    "TimerListItemEnd",
 
-    "TimerAdd" : 18,
-    "TimerToggle" : 19
-  },
+    "TimerAdd",
+    "TimerToggle" 
+  ],
   "resources": {
     "media": [      
       {

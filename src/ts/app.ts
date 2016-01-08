@@ -24,14 +24,18 @@ export default class App extends MessageHandler {
 
     this.queue = new MessageQueue();
     this.options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
+    this.options.onUpdate = () => this.verifyAuth();
+    
     this.harvest = new HarvestService(this.options);
         
-    Pebble.addEventListener('ready', () => {
-      this.options.set('token.domain', 'eaiti');
-      this.options.set('oauth.access_token', 'MTpKXuAags1iN6tL-5W1tjVDPbIEc6vL_-HshDfhTqxpechFkU4O6qDdsRYyunsikToppK1kavznTx49wogvBw');
-      
-      this.queue.pushMap(AppKey.Action, Action.Ready);
-    });
+    Pebble.addEventListener('ready', () => { this.verifyAuth(); });
+  }
+  
+  verifyAuth():void {
+    this.harvest.whoami().then(
+      () => this.queue.pushMap(AppKey.Action, Action.Ready),
+      () => this.queue.pushMap(AppKey.Action, Action.Unauthenticated)
+    );
   }
   
   streamList<T>(start: Action, item : Action, end: Action, promise:Promise<T[]>, transform:(T)=>any):Promise<T[]> {

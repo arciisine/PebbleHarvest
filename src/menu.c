@@ -200,7 +200,7 @@ MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
   //Update size
   copy->size = graphics_text_layout_get_content_size(
     copy->title, 
-    fonts_get_system_font(FONT_KEY_GOTHIC_18), (GRect) { .size = { 300, 24}, .origin = {0, 0} },
+    fonts_get_system_font(FONT_KEY_GOTHIC_18), (GRect) { .size = { 500, 24}, .origin = {0, 0} },
     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
 
   section->item_count += 1;
@@ -265,9 +265,15 @@ void menu_set_title(Menu* menu, char* title) {
 
 void menu_selection_changed(struct MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
-  menu_initiate_scroll_timer(menu);
   MenuItem* item = menu->sections[old_index.section]->items[old_index.row];
   item->scroll_offset = 0;
+  
+  item = menu->sections[new_index.section]->items[new_index.row];
+  if (item->size.w > 144) {
+    menu_initiate_scroll_timer(menu);
+  } else {
+    app_timer_cancel(menu->scroll_timer);
+  }
 }
 
 Menu* menu_create(char* title) {

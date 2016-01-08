@@ -9,10 +9,11 @@ typedef struct Sections {
   int alternate; 
 } Sections;
 
-static Window *window;
 static Menu *project_menu;
 static Menu *task_menu;
 static Menu *timer_menu;
+static Window *message_screen;
+static TextLayer *message_text;
 
 static Sections project_sections;
 static Sections task_sections;
@@ -72,16 +73,21 @@ static void menu_set_status(Menu* menu, uint16_t section_id, char* status) {
   menu_layer_reload_data(menu->layer);
 }
 
-static void reload_timers() {
-  menu_close(project_menu);
-  menu_close(task_menu);
+static void timer_menu_open() {  
   menu_empty(timer_menu);
+  window_stack_pop_all(false);
+  menu_open(timer_menu);
   menu_set_status(timer_menu, timer_sections.status, LOADING_TEXT);
   send_message(ActionTimerListFetch, 0);
-  menu_open(timer_menu);
 }
 
-static void open_project_menu() {
+static void message_show(char* text) {
+  window_stack_pop_all(false);
+  text_layer_set_text(message_text, text);
+  window_stack_push(message_screen, false);
+}
+
+static void project_menu_open() {
   if (
     project_menu->sections[project_sections.primary]->item_count == 0 &&
     project_menu->sections[project_sections.alternate]->item_count == 0
@@ -120,7 +126,7 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
       send_message(ActionTimerToggle, 1, AppKeyTimer, item->id);
     }
   } else if (item->id == -2) {
-    open_project_menu();
+    project_menu_open();
   }
 }
 
@@ -228,7 +234,7 @@ static void on_projectlist_build(DictionaryIterator *iter, Action action) {
   }
 }
 
-static void toggle_timer(DictionaryIterator *iter) {
+static void timer_toggle(DictionaryIterator *iter) {
   int id = dict_key_int(iter, AppKeyTimer);
   bool active = dict_key_bool(iter, AppKeyActive);
   MenuSection* timers = timer_menu->sections[timer_sections.primary];
@@ -250,15 +256,19 @@ static void on_message(DictionaryIterator *iter, void *context) {
   
   switch(action) {
     case ActionReady:
-      reload_timers();
+      timer_menu_open();
+      break;
+    
+    case ActionUnauthenticated:
+      message_show("Please login first via the Settings Menu");
       break;
 
     case ActionTimerListReload:
-      reload_timers();
+      timer_menu_open();
       break;
       
     case ActionTimerToggle:
-      toggle_timer(iter);
+      timer_toggle(iter);
       break;
       
     case ActionProjectListStart:
@@ -285,44 +295,9 @@ static void on_message(DictionaryIterator *iter, void *context) {
 }
 
 
-static void main_menu_load(Window *window) {
-    
-  checkmark_active = gbitmap_create_with_resource(RESOURCE_ID_CHECK_ACTIVE);
-  checkmark_inactive = gbitmap_create_with_resource(RESOURCE_ID_CHECK_INACTIVE);
-  plus_icon = gbitmap_create_with_resource(RESOURCE_ID_PLUS);
-  
-  ADD_TASK_ITEM.icon = plus_icon;
-  
-  project_menu = menu_create(PROJECT_MENU_TITLE);
-  project_sections = (Sections) {
-    .status = menu_add_section(project_menu, NULL)->id,
-    .primary = menu_add_section(project_menu, NULL)->id,
-    .alternate = menu_add_section(project_menu, OLDER_SECTION_TITLE)->id  
-  };
-  project_menu->click = project_select_handler;
-
-  task_menu = menu_create(TASK_MENU_TITLE);
-  task_sections = (Sections) {
-    .status = menu_add_section(task_menu, NULL)->id,
-    .primary = menu_add_section(task_menu, NULL)->id,
-    .alternate = menu_add_section(task_menu, OLDER_SECTION_TITLE)->id  
-  };
-  
-  task_menu->click = task_select_handler;
-}
-
-static void main_menu_unload(Window *window) {
-  menu_destroy(project_menu);
-  menu_destroy(task_menu);
-
-  gbitmap_destroy(checkmark_active);
-  gbitmap_destroy(checkmark_inactive);
-  gbitmap_destroy(plus_icon);
-}
-
-static void main_menu_appear(Window *window) {
-  
-}
+static void main_menu_load(Window *window) {}
+static void main_menu_unload(Window *window) {}
+static void main_menu_appear(Window *window) {}
 
 static void init(void) {
   // Register message handlers
@@ -331,6 +306,7 @@ static void init(void) {
   // Init buffers
   app_message_open(120, 120);
   
+  //Init Timer Menu
   timer_menu = menu_create(TIMER_MENU_TITLE);
   timer_menu->click = timer_select_handler;
   
@@ -344,18 +320,61 @@ static void init(void) {
   timer_menu->window_handlers.appear = main_menu_appear;
   timer_menu->window_handlers.load = main_menu_load;
   timer_menu->window_handlers.unload = main_menu_unload;
-  menu_open(timer_menu);  
+  
+  //Init project menu
+  project_menu = menu_create(PROJECT_MENU_TITLE);
+  project_sections = (Sections) {
+    .status = menu_add_section(project_menu, NULL)->id,
+    .primary = menu_add_section(project_menu, NULL)->id,
+    .alternate = menu_add_section(project_menu, OLDER_SECTION_TITLE)->id  
+  };
+  project_menu->click = project_select_handler;
+
+  //Init Taks Menu
+  task_menu = menu_create(TASK_MENU_TITLE);
+  task_sections = (Sections) {
+    .status = menu_add_section(task_menu, NULL)->id,
+    .primary = menu_add_section(task_menu, NULL)->id,
+    .alternate = menu_add_section(task_menu, OLDER_SECTION_TITLE)->id  
+  };
+  
+  task_menu->click = task_select_handler;
+  
+  checkmark_active = gbitmap_create_with_resource(RESOURCE_ID_CHECK_ACTIVE);
+  checkmark_inactive = gbitmap_create_with_resource(RESOURCE_ID_CHECK_INACTIVE);
+  plus_icon = gbitmap_create_with_resource(RESOURCE_ID_PLUS);   
+
+  ADD_TASK_ITEM.icon = plus_icon;
+  
+  //Initialize Message Screen
+  message_screen = window_create();
+  Layer* root = window_get_root_layer(message_screen);
+  GRect bounds = layer_get_frame(root);  
+  message_text = text_layer_create((GRect){.size={bounds.size.w, bounds.size.h-20}, .origin={0, 20}});
+  text_layer_set_font(message_text, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(message_text, GTextAlignmentCenter);  
+  layer_add_child(root, text_layer_get_layer(message_text));
+
+  message_show(LOADING_TEXT);
 }
 
 static void deinit(void) {
+  //Destroy menu
   menu_destroy(timer_menu);
+  menu_destroy(project_menu);
+  menu_destroy(task_menu);
+  
+  //Destroy message screen
+  text_layer_destroy(message_text);
+  window_destroy(message_screen);
+    
+  gbitmap_destroy(checkmark_active);
+  gbitmap_destroy(checkmark_inactive);
+  gbitmap_destroy(plus_icon);
 }
 
 int main(void) {
   init();
-
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
-
   app_event_loop();
   deinit();
 }
