@@ -7,8 +7,10 @@ import {message} from './service/message-handler';
 import {Promise} from './util/deferred';
 
 import TaskModel from './model/task';
+import TimerModel from './model/timer';
 import ProjectModel from './model/project';
 
+import Utils from './util/utils';
 import {Action, ActionNames, AppKey} from './message-format';
 
 export default class App extends MessageHandler {
@@ -18,7 +20,7 @@ export default class App extends MessageHandler {
   harvest:HarvestService;
 
   constructor() {
-    super('Action', (i) => ActionNames[i]);
+    super(AppKey.Action, (i) => ActionNames[i]);
 
     this.queue = new MessageQueue();
     this.options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
@@ -28,18 +30,16 @@ export default class App extends MessageHandler {
       this.options.set('token.domain', 'eaiti');
       this.options.set('oauth.access_token', 'MTpKXuAags1iN6tL-5W1tjVDPbIEc6vL_-HshDfhTqxpechFkU4O6qDdsRYyunsikToppK1kavznTx49wogvBw');
       
-      this.queue.push({
-        Action : 'ready'
-      });
+      this.queue.pushMap(AppKey.Action, Action.Ready);
     });
   }
   
   streamList<T>(start: Action, item : Action, end: Action, promise:Promise<T[]>, transform:(T)=>any):Promise<T[]> {
-    this.queue.push({ Action : start });
-    return promise.then(function(data:T[]) {
+    this.queue.pushMap(AppKey.Action, start);
+    return promise.then((data:T[]) => {
       (data || []).forEach(i => {
         let msg = transform(i);
-        msg.Action = item;
+        msg[AppKey.Action] = item;
         this.queue.push(msg);
       }, this.onError.bind(this));
       this.queue.push({ Action : end });
@@ -48,9 +48,7 @@ export default class App extends MessageHandler {
 
   onError(e) {
     console.log("Error: ",e);
-    this.queue.push({
-      Action : "Error",
-    });  
+    this.queue.pushMap(AppKey.Action, Action.Ready);  
   }
  
   @message(Action.ProjectListFetch)
@@ -58,11 +56,11 @@ export default class App extends MessageHandler {
     return this.harvest.getRecentProjectTaskMap().then(recent => {      
       this.streamList(Action.ProjectListStart, Action.ProjectListItem, Action.ProjectListEnd,
         this.harvest.getProjects(),
-        (p:ProjectModel) => ({ 
-          Project : p.id,
-          Active: recent[p.id] !== undefined,
-          Name : p.name 
-        })
+        (p:ProjectModel) => Utils.buildMap( 
+          AppKey.Project, p.id,
+          AppKey.Active, recent[p.id] !== undefined,
+          AppKey.Name, p.name 
+        )
       )
     });
   }
@@ -70,60 +68,62 @@ export default class App extends MessageHandler {
   @message(Action.TimerListFetch)
   timerList(data:Pebble.MessagePayload) {
     return this.harvest.getTimers().then(items => {
-      this.queue.push({ Action : Action.TimerListStart });
+      this.queue.pushMap(AppKey.Action, Action.TimerListStart);
       
       items.forEach(t => {
-        this.queue.push([{
-          Action : Action.TimerListItemStart,
-          Timer : t.id,
-          Project : t.projectId,
-          Task : t.taskId,
-          Active : t.active
-        }, {
-          Action : Action.TimerListItemProjectName,
-          Name : t.projectTitle
-        },{
-          Action : Action.TimerListItemTaskName,
-          Name : t.taskTitle
-        }, {
-          Action : Action.TimerListItemEnd
-        }])
+        this.queue.pushMap(
+          AppKey.Action, Action.TimerListItemStart,
+          AppKey.Timer, t.id,
+          AppKey.Project, t.projectId,
+          AppKey.Task, t.taskId,
+          AppKey.Active, t.active
+        );
+        this.queue.pushMap(
+          AppKey.Action, Action.TimerListItemProjectName,
+          AppKey.Name, t.projectTitle
+        );
+        this.queue.pushMap(
+          AppKey.Action, Action.TimerListItemTaskName,
+          AppKey.Name, t.taskTitle
+        );
+        this.queue.pushMap(AppKey.Action, Action.TimerListItemEnd);
       });
       
-      this.queue.push({ Action : Action.TimerListEnd });
+      this.queue.pushMap(AppKey.Action, Action.TimerListEnd);
     });
   }
+  
   @message(Action.TaskListFetch) 
   projectTasks(data:Pebble.MessagePayload) {
     return this.harvest.getRecentProjectTaskMap().then((recent) => {
       this.streamList(Action.TaskListStart, Action.TaskListItem, Action.TaskListEnd, 
         this.harvest.getProjectTasks(data[AppKey.Project] as number), 
-        (t:TaskModel) => ({
-          Task : t.id, 
-          Active : recent[data[AppKey.Project] as number][t.id] !== undefined,
-          Name : t.name 
-        }));
+        (t:TaskModel) => Utils.buildMap(
+          AppKey.Task,  t.id, 
+          AppKey.Active, recent[data[AppKey.Project] as number][t.id] !== undefined,
+          AppKey.Name, t.name 
+        ));
     });
   }
   
   @message(Action.TimerAdd) 
   timerAdd(data:Pebble.MessagePayload) {
-    return this.harvest.createTimer(data[AppKey.Project] as number, data['Task'] as number).then(timer => {
-      this.queue.push({ 
-        Action : Action.TimerListReload, 
-        Timer : timer.id 
-      })
+    return this.harvest.createTimer(data[AppKey.Project] as number, data['Task'] as number).then((timer:TimerModel) => {
+      this.queue.pushMap( 
+        AppKey.Action, Action.TimerListReload, 
+        AppKey.Timer, timer.id 
+      )
     });
   }
   
   @message(Action.TimerToggle)
   toggleTimer(data:Pebble.MessagePayload) {
     return this.harvest.toggleTimer(data[AppKey.Timer] as number).then(timer => {
-      this.queue.push({
-        Action : Action.TimerListReload,
-        Timer : timer.id,
-        Active : !timer.ended_at && !!timer.timer_started_at
-      });
+      this.queue.pushMap(
+        AppKey.Action, Action.TimerToggle,
+        AppKey.Timer, timer.id,
+        AppKey.Active, !timer.ended_at && !!timer.timer_started_at
+      );
     });
   }
 }

@@ -4,10 +4,12 @@ import memoize from '../util/memoize';
 import TimerModel from '../model/timer';
 import TaskModel from '../model/task';
 import ProjectModel from '../model/project';
-import ProjectTaskModel from '../model/project-task';
 
 import BaseService from './base';  
 import OptionService from './options';
+
+let HOUR = 3600000
+let DAY = 3600000
 
 export default class HarvestService extends BaseService {
   constructor(options:OptionService) {
@@ -27,7 +29,6 @@ export default class HarvestService extends BaseService {
     let def = new Deferred<TimerModel>();
     
     this.get('/daily').then(assignments => {
-      console.log(JSON.stringify(assignments));   
       
       let active = assignments.day_entries
         .map(a => {
@@ -39,7 +40,6 @@ export default class HarvestService extends BaseService {
         })
         .sort((a:any,b:any) => b.updated_at - a.updated_at)
         .map(x => {
-          console.log(x.updated_at);
           let key = `${x.project_id}||${x.task_id}`;
           if (!seen[key]) { 
             seen[key] = true;
@@ -61,7 +61,7 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }
   
-  @memoize()
+  @memoize(HOUR)
   getRecentProjectTaskMap():Promise<{[key:string]:{[key:string]:boolean}}> {
     let def = new Deferred<{[key:string]:{[key:string]:boolean}}>();
       
@@ -86,19 +86,25 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }
   
-  createTimer(projectId:number, taskId:number):Promise<any> {
+  createTimer(projectId:number, taskId:number):Promise<TimerModel> {
+    let def = new Deferred<TimerModel>();
     let data = {
       "project_id" : projectId,
       "task_id" : taskId
     };
-    return this.post('/daily/add', data);
+    this.post('/daily/add', data).then(timer => {
+      let model = new TimerModel();
+      model.id = timer.id;
+      def.resolve(model);
+    }, def.reject);
+    return def.promise();
   }
   
   toggleTimer(entryId:number):Promise<any> {  
     return this.post('/daily/timer/'+entryId);
   }
   
-  @memoize()
+  @memoize(DAY)
   getTasks():Promise<TaskModel[]> {
     let def = new Deferred<TaskModel[]>();
     
@@ -113,20 +119,18 @@ export default class HarvestService extends BaseService {
           return out;
         });
       
-      console.log("Tasks", JSON.stringify(models));
-      
       def.resolve(models);
     }, def.reject);
     
     return def.promise();
   }
   
-  @memoize()
+  @memoize(DAY)
   getTaskMap():Promise<{[key:string]:TaskModel}> {
     return this.listToMap(this.getTasks(), 'id');
   }
   
-  @memoize()
+  @memoize(DAY)
   getProjects():Promise<ProjectModel[]> {
     let def = new Deferred<ProjectModel[]>();
     
@@ -148,7 +152,7 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }  
   
-  @memoize()
+  @memoize(DAY)
   getProjectMap():Promise<{[key:string]:ProjectModel}> {
     this.getProjects().then(function(data:ProjectModel[]) {
       
@@ -156,7 +160,7 @@ export default class HarvestService extends BaseService {
     return this.listToMap(this.getProjects(), 'id');
   }
   
-  @memoize()
+  @memoize(HOUR)
   getProjectTasks(projectId:number):Promise<TaskModel[]> {
     let def = new Deferred<TaskModel[]>();
     

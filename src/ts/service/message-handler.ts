@@ -10,8 +10,8 @@ export default class MessageHandler {
   appKey:string = null;
   actionKeyTranslator:(any) => string = null;
   
-  constructor(appKey, actionKeyTranslator?:(any) => string) {
-    this.appKey = appKey;
+  constructor(appKey:number|string, actionKeyTranslator?:(any) => string) {
+    this.appKey = `${appKey}`;
     this.actionKeyTranslator = actionKeyTranslator;
    
     //Auto register
@@ -52,7 +52,7 @@ export default class MessageHandler {
   
   translateKey(key:number|string):string {
     if (this.actionKeyTranslator) {
-      return this.actionKeyTranslator[key];
+      return this.actionKeyTranslator(key);
     } else {
       return '' + key;
     }

@@ -55,6 +55,11 @@
         "type": "bitmap",
         "name": "CHECK_INACTIVE",
         "file": "images/check-inactive.png"
+      },
+      {
+        "type": "bitmap",
+        "name": "PLUS",
+        "file": "images/plus.png"
       }
     ]
   }

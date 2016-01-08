@@ -24,13 +24,13 @@ typedef struct Menu {
   TextLayer* title_layer;
   Layer* parent;
   MenuSection* sections[MAX_MENU_SIZE];
-  MenuItem* items[MAX_MENU_SIZE];
   int section_count;
-  int item_count;
   MenuLayer* layer;
   void (*click)(MenuItem*, bool);
   void (*on_load)(Window* window);
   void (*on_unload)(Window* window);
+  void (*on_appear)(Window* window);
+  void (*on_disappear)(Window* window);
 } Menu;
 
 Menu* menu_create(char* title);
@@ -39,5 +39,7 @@ void menu_destroy(Menu* menu);
 void menu_close(Menu* menu);
 void menu_open(Menu* menu);
 void menu_empty(Menu* menu);
+void menu_empty_section(Menu* menu, uint16_t section_id);
+void menu_set_title(Menu* menu, char* title);
 MenuSection* menu_add_section(Menu* menu, char* title);
 MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id);

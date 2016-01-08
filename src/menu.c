@@ -7,20 +7,23 @@
 #define ICON_HEIGHT (CELL_HEIGHT - 5)
 #define TITLE_HEIGHT 20
 
-void menu_empty(Menu* menu) {
-  for (int s = 0; s < menu->section_count; s++ ) {
-    MenuSection* section = menu->sections[s];
-    section->item_count = 0;
-  }
+void menu_empty_section(Menu* menu, uint16_t section_index) {
+  MenuSection* section = menu->sections[section_index];
   
-  for (int i = 0; i < menu->item_count; i++) {
-    MenuItem* item = menu->items[i];
+  for (int i = 0; i < section->item_count; i++) {
+    MenuItem* item = section->items[i];
     free_and_clear(item->title);
     free_and_clear(item->subtitle);  
     item->id = 0;
   }
   
-  menu->item_count = 0;
+  section->item_count = 0;
+}
+
+void menu_empty(Menu* menu) {
+  for (int s = 0; s < menu->section_count; s++ ) {
+    menu_empty_section(menu, s);
+  }  
 }
 
 uint16_t menu_row_count(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
@@ -133,10 +136,10 @@ MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
     section = menu_add_section(menu, NULL);
   }
   
-  MenuItem* copy = menu->items[menu->item_count];
+  MenuItem* copy = section->items[section->item_count];
   
   if (copy == NULL) {
-    copy = menu->items[menu->item_count] = malloc(sizeof(MenuItem));
+    copy = section->items[section->item_count] = malloc(sizeof(MenuItem));
   }
 
   copy->title = strdup(item.title);
@@ -144,10 +147,7 @@ MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
   copy->id = item.id;
   copy->icon = item.icon;
  
-  section->items[section->item_count] = copy;
-  
   section->item_count += 1;
-  menu->item_count += 1;
   
   menu_layer_reload_data(menu->layer);
   return copy;  
@@ -155,6 +155,8 @@ MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
 
 void menu_window_load(Window* window) {
   Menu* menu = (Menu*) window_get_user_data(window);
+  menu_layer_set_selected_index(menu->layer, (MenuIndex){0,0}, MenuRowAlignTop, false);
+  
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window loaded: %p, %p", menu, menu->parent);
   
@@ -172,10 +174,37 @@ void menu_window_unload(Window* window) {
   }
 }
 
+void menu_window_appear(Window* window) {
+  Menu* menu = (Menu*) window_get_user_data(window);
+  
+  //Do something
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window appear: %p, %p", menu, menu->parent);
+  
+  if (menu->on_appear) {
+    menu->on_appear(menu->window);
+  }
+}
+
+void menu_window_disappear(Window* window) {
+  Menu* menu = (Menu*) window_get_user_data(window);
+  //Do something
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window disappear: %p, %p", menu, menu->parent);
+  if (menu->on_disappear) {
+    menu->on_disappear(menu->window);
+  }
+}
+
 MenuItem* menu_get_selected_item(Menu* menu) {
   MenuIndex index = menu_layer_get_selected_index(menu->layer);
   return menu->sections[index.section]->items[index.row];
 }
+
+void menu_set_title(Menu* menu, char* title) {
+  free_and_clear(menu->title);
+  menu->title = strdup(title);
+  text_layer_set_text(menu->title_layer, menu->title);
+  //layer_mark_dirty(text_layer_get_layer(menu->title_layer));
+} 
 
 Menu* menu_create(char* title) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Initializing menu");
@@ -189,6 +218,8 @@ Menu* menu_create(char* title) {
   window_set_user_data(menu->window, menu);
   
   window_set_window_handlers(menu->window, (WindowHandlers){
+    .appear = menu_window_appear,
+    .disappear = menu_window_disappear,
     .load = menu_window_load,
     .unload = menu_window_unload,
   });
@@ -238,18 +269,16 @@ Menu* menu_create(char* title) {
 
 void menu_destroy(Menu* menu) {
   menu_empty(menu);
-  for (uint16_t s = 0; s < MAX_MENU_SIZE; s++ ) {
-    if (menu->sections[s] != NULL ) {
-      free_and_clear(menu->sections[s]);
+  for (uint16_t s = 0; s < menu->section_count; s++ ) {
+    MenuSection* section = menu->sections[s];
+    for (uint16_t i = 0; i < MAX_MENU_SIZE; i++) {
+      if (section->items[i] != NULL) {
+        free_and_clear(section->items[i]);
+      }
     }
+    free_and_clear(menu->sections[s]);
   }
-  
-  for (uint16_t i = 0; i < MAX_MENU_SIZE; i++) {
-    if (menu->items[i] != NULL) {
-      free_and_clear(menu->items[i]);
-    }
-  }
-  
+    
   menu_layer_destroy(menu->layer);
   if (menu->title != NULL) {
     text_layer_destroy(menu->title_layer);

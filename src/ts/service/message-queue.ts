@@ -1,3 +1,5 @@
+import Utils from '../util/utils';
+
 export default class MessageQueue {
   constructor() {
     ['_iterateSuccess' ,'_iterateFailure', 'push'].forEach(key => { this[key] = this[key].bind(this); })
@@ -23,8 +25,12 @@ export default class MessageQueue {
     }
     
     let out = this._queue[0];    
-    console.log("Dequeued", out['Action'], JSON.stringify(out));
+    console.log("Dequeued", JSON.stringify(out));
     Pebble.sendAppMessage(out, this._iterateSuccess, this._iterateFailure);
+  }
+  
+  pushMap(...args):void {
+    this.push(Utils.buildMap.apply(null, args));
   }
   
   push(data:Pebble.MessagePayload|Pebble.MessagePayload[]):void {
@@ -35,7 +41,7 @@ export default class MessageQueue {
         this._queue = this._queue.concat(data);
     }
     
-    console.log("Queued", data['Action'], JSON.stringify(data));
+    console.log("Queued", JSON.stringify(data));
     
     if (!this._active) {
       this._active = true;
