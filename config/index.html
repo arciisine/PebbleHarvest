@@ -1,40 +1,70 @@
-<html>
-    <head>
-        <script src="./config.js"></script>
-        <script>
-            window.onload = function() {
-                config.optionsToForm(config.readOptions());
-                                          
-                var hash = config.queryParams(window.location.hash);
-                if (hash.access_token) {
-                  hash = config.queryParams(window.location.hash, 'oauth');
-                }
-                if (hash) {
-                  config.optionsToForm(hash);
-                  window.location.hash = '';
-                }
-                config.setRedirectLocation();
-            }
-            window.onbeforeunload = function() {
-              config.writeOptions(config.formToOptions());                                
-            }         
-        </script>
-    </head>
-    <body>
-        <button onclick="config.saveAndClose()">Save</button>
-        <form name="token" method="GET" action="temp">
-            <input type="text" class="option" name="domain" placeholder="example" onchange="config.setFormAction()" />
-            <input type="hidden" name="client_id" value="RRWPBGSv4UCC9c2lBd48ug">
-            <input type="hidden" name="state" value="optional-csrf-token">
-            <input type="hidden" name="response_type" value="token">
-            <input type="hidden" name="redirect_uri" >
-            <button type="submit">Get Token</button>
-        </form>
-        <form name="oauth">
-          <input type="text" readonly name="access_token" >
-          <input type="text" readonly name="expires_in" >
-          <input type="text" readonly name="state" >
-          <input type="text" readonly name="token_type" >
-        </form>
-    </body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport">
+
+    <link href="./css/slate.min.css" rel="stylesheet">
+    <script src="./js/slate.min.js"></script>
+    <script src="./config.js"></script>
+    <script>
+      window.onload = function() {
+        config.optionsToForm(config.readOptions());
+                                  
+        var hash = config.queryParams(window.location.hash);
+        if (hash.access_token) {
+          hash = config.queryParams(window.location.hash, 'oauth');
+        }
+        if (hash) {
+          config.optionsToForm(hash);
+          window.location.hash = '';
+        }
+        config.setRedirectLocation();
+      }
+      window.onbeforeunload = function() {
+        config.writeOptions(config.formToOptions());                                
+      }         
+    </script>
+  </head>
+  <body>
+    <div class="item-container">
+      <div class="button-container">
+        <button class="item-button" onclick="config.saveAndClose()">Save</button>
+      </div>
+    </div>
+
+    <form class="item-container" name="oauth">
+      <div class="item-container-header">Authentication Status</div>
+      <div class="item-container-content">
+        <div class="item">
+          Token
+          <div class="item-input-wrapper">
+            <input type="text" class="item-input" readonly name="access_token" placeholder="None">
+          </div>
+        </div>
+        <div class="item">
+          Expires In
+          <div class="item-input-wrapper">
+            <input type="text" class="item-input" readonly name="expires_in"  placeholder="None">
+          </div>
+        </div>
+        <input type="hidden"  name="state" >
+        <input type="hidden" name="token_type" >
+      </div>
+    </form>
+
+    <form name="token" method="GET" action="https://api.harvestapp.com/oauth2/authorize">
+      <!--input type="text" class="option" name="domain" placeholder="example" onchange="config.setFormAction()" -->
+      <input type="hidden" name="client_id" value="RRWPBGSv4UCC9c2lBd48ug">
+      <input type="hidden" name="state" value="optional-csrf-token">
+      <input type="hidden" name="response_type" value="token">
+      <input type="hidden" name="redirect_uri">
+      
+      <div class="item-container">
+        <div class="button-container">
+          <button type="submit" class="item-button">Authorize</button>
+        </div>
+      </div>
+    </form>
+  </body>
 </html>
