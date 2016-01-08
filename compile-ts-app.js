@@ -1,5 +1,7 @@
 let child_process = require('child_process');
 let fs = require('fs');
+let APP = './build/app.js';
+let PEBBLE_JS_APP = 'src/js/pebble-js-app.js';
 
 function register(window) {
   var loaded = { require : function() {} };
@@ -42,16 +44,16 @@ function init(req) {
 }
 
 //Compile
-child_process.execSync('./node_modules/.bin/tsc -p . --outFile ./tmp/out.js');
+child_process.execSync(`./node_modules/.bin/tsc -p . --outFile ${APP}`);
 
 //Read
-let source = fs.readFileSync('./tmp/out.js');
-fs.unlinkSync('./tmp/out.js');
+let source = fs.readFileSync(APP);
+fs.unlinkSync(APP);
 
 try { fs.mkdirSync('src/js'); } catch(e) {}
 
 //Final
-fs.writeFileSync('src/js/pebble-js-app.js', 
+fs.writeFileSync(PEBBLE_JS_APP, 
 `register(window); 
 ${source}; 
 init(window.require); 
