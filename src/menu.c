@@ -5,7 +5,52 @@
 #define BASIC_CELL_HEIGHT 48
 #define CELL_PADDING 3
 #define ICON_HEIGHT (CELL_HEIGHT - 5)
-#define TITLE_HEIGHT 20
+#define TITLE_HEIGHT 24
+#define HEADER_HEIGHT 20
+#define PROXY_HANDLER(M,PROP) if (M->window_handlers.PROP != NULL) { M->window_handlers.PROP (M->window); }
+
+#define SCROLL_MENU_ITEM_WAIT_TIMER 2000
+#define SCROLL_MENU_ITEM_TIMER 10
+
+static void menu_scroll_callback(void* data) {
+  Menu* menu = (Menu*)data;
+  menu->scroll_timer = NULL;
+  
+  int w = layer_get_frame(menu->parent).size.w;
+  
+  MenuItem* item = menu_get_selected_item(menu);
+  
+  if (((item->size.w - item->scroll_offset) - w + 20) < 0) {
+    if (item->scroll_offset == 0) {
+      return;
+    } else {
+      item->scroll_offset = 0;
+    }
+  } else {  
+    item->scroll_offset+=5;
+  }
+  
+  
+  // Redraw the menu with this scroll offset
+  
+  menu_layer_reload_data(menu->layer);
+  menu->scroll_timer = app_timer_register(SCROLL_MENU_ITEM_TIMER, menu_scroll_callback, menu);
+}
+
+static void menu_initiate_scroll_timer(Menu* menu) {
+  // If there is already a timer then reschedule it, otherwise create one
+  
+  bool need_to_create_timer = true;
+  
+  if(menu->scroll_timer) {
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Rescheduling timer");
+    need_to_create_timer = !app_timer_reschedule(menu->scroll_timer, SCROLL_MENU_ITEM_WAIT_TIMER);
+  }
+  if(need_to_create_timer) {
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Creating timer");
+    menu->scroll_timer = app_timer_register(SCROLL_MENU_ITEM_WAIT_TIMER, menu_scroll_callback, menu);
+  }
+}
 
 void menu_empty_section(Menu* menu, uint16_t section_index) {
   MenuSection* section = menu->sections[section_index];
@@ -36,7 +81,7 @@ uint16_t menu_row_count(struct MenuLayer *menu_layer, uint16_t section_index, vo
 int16_t menu_header_height(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
   MenuSection* section = menu->sections[section_index];
-  return (section->title != NULL) ? TITLE_HEIGHT : 0;
+  return (section->title != NULL && (section->item_count > 0 || section->always_show)) ? HEADER_HEIGHT : 0;
 }
 
 uint16_t menu_section_count(struct MenuLayer *menu_layer, void *callback_context) {
@@ -50,11 +95,16 @@ void menu_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t section_i
   MenuSection* section = menu->sections[section_index];
   GRect bounds = layer_get_frame(cell_layer);
   
+  graphics_context_set_fill_color(ctx, GColorFromHEX(0x666666));
+  graphics_fill_rect(ctx, (GRect) {.size={bounds.size.w, HEADER_HEIGHT}, .origin={0,0}}, 0, GCornerNone);
+
   graphics_context_set_stroke_color(ctx, GColorFromHEX(0x000000));
-  graphics_draw_line(ctx, (GPoint){0,1}, (GPoint){bounds.size.w,1});
+  graphics_draw_line(ctx, (GPoint){0,0}, (GPoint){bounds.size.w,0});
   graphics_draw_line(ctx, (GPoint){0,bounds.size.h-1}, (GPoint){bounds.size.w,bounds.size.h-1});
 
   if (section->title) {
+    graphics_context_set_text_color(ctx, GColorFromHEX(0xFFFFFF));
+    
     //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw header: %p, %s", menu, section->title);    
     graphics_draw_text(ctx, section->title, 
       fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), 
@@ -83,14 +133,13 @@ void menu_draw_row(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index
   int left_padding = (item->icon ? ICON_HEIGHT : 0) + CELL_PADDING;
   int right_padding = CELL_PADDING;
   int all_padding = left_padding + right_padding;
-  bool small_text = strlen(item->title) > 10;
-  char* font_key =  small_text ? FONT_KEY_GOTHIC_14_BOLD : FONT_KEY_GOTHIC_18_BOLD;
-  int font_height = small_text ? 18 : 24;
+  int font_height = 24;
   int vertical_padding = (CELL_HEIGHT - font_height) / 2;
+  int offset = item->scroll_offset;
   
   graphics_draw_text(ctx, item->title, 
-    fonts_get_system_font(font_key), 
-    (GRect) { .size = { bounds.size.w - all_padding, font_height}, .origin = { left_padding, vertical_padding } }, 
+    fonts_get_system_font(FONT_KEY_GOTHIC_18), 
+    (GRect) { .size = { (bounds.size.w-all_padding) + offset, CELL_HEIGHT }, .origin = { left_padding - offset, vertical_padding } }, 
     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
@@ -146,7 +195,14 @@ MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
   copy->subtitle = strdup(item.subtitle);
   copy->id = item.id;
   copy->icon = item.icon;
- 
+  copy->scroll_offset = 0;
+  
+  //Update size
+  copy->size = graphics_text_layout_get_content_size(
+    copy->title, 
+    fonts_get_system_font(FONT_KEY_GOTHIC_18), (GRect) { .size = { 300, 24}, .origin = {0, 0} },
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
+
   section->item_count += 1;
   
   menu_layer_reload_data(menu->layer);
@@ -170,19 +226,14 @@ void menu_window_load(Window* window) {
   
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window loaded: %p, %p", menu, menu->parent);
-  
-  if (menu->on_load) {
-    menu->on_load(menu->window);
-  }
+  PROXY_HANDLER(menu, load);
 }
 
 void menu_window_unload(Window* window) {
   Menu* menu = (Menu*) window_get_user_data(window);
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window unloaded: %p, %p", menu, menu->parent);
-  if (menu->on_unload) {
-    menu->on_unload(menu->window);
-  }
+  PROXY_HANDLER(menu, unload);
 }
 
 void menu_window_appear(Window* window) {
@@ -190,19 +241,14 @@ void menu_window_appear(Window* window) {
   
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window appear: %p, %p", menu, menu->parent);
-  
-  if (menu->on_appear) {
-    menu->on_appear(menu->window);
-  }
+  PROXY_HANDLER(menu, appear);
 }
 
 void menu_window_disappear(Window* window) {
   Menu* menu = (Menu*) window_get_user_data(window);
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window disappear: %p, %p", menu, menu->parent);
-  if (menu->on_disappear) {
-    menu->on_disappear(menu->window);
-  }
+  PROXY_HANDLER(menu, disappear);
 }
 
 MenuItem* menu_get_selected_item(Menu* menu) {
@@ -216,6 +262,13 @@ void menu_set_title(Menu* menu, char* title) {
   text_layer_set_text(menu->title_layer, menu->title);
   //layer_mark_dirty(text_layer_get_layer(menu->title_layer));
 } 
+
+void menu_selection_changed(struct MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *callback_context) {
+  Menu* menu = (Menu*) callback_context;
+  menu_initiate_scroll_timer(menu);
+  MenuItem* item = menu->sections[old_index.section]->items[old_index.row];
+  item->scroll_offset = 0;
+}
 
 Menu* menu_create(char* title) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Initializing menu");
@@ -244,7 +297,8 @@ Menu* menu_create(char* title) {
     bounds.size.h -= TITLE_HEIGHT;
     bounds.origin.y += TITLE_HEIGHT;
     
-    menu->title_layer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { bounds.size.w, TITLE_HEIGHT } });
+    menu->title_layer = text_layer_create((GRect) { .origin = { 0, -2 }, .size = { bounds.size.w, TITLE_HEIGHT + 2 } });
+    text_layer_set_font(menu->title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
     text_layer_set_background_color(menu->title_layer, GColorFromHEX(0x666666));
     text_layer_set_text_color(menu->title_layer, GColorFromHEX(0xFFFFFF));
     text_layer_set_text(menu->title_layer, menu->title);
@@ -267,6 +321,7 @@ Menu* menu_create(char* title) {
     .get_cell_height = menu_cell_height,
     .draw_row = menu_draw_row,
     .draw_header = menu_draw_header,
+    .selection_changed = menu_selection_changed,
     .select_click = menu_select_click,
     .select_long_click = menu_select_long_click
   });

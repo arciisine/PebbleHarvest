@@ -6,7 +6,9 @@
 typedef struct MenuItem {
   char* title;
   char* subtitle;
+  int scroll_offset;
   int id;
+  GSize size;
   GBitmap* icon;
 } MenuItem;
 
@@ -20,6 +22,7 @@ typedef struct MenuSection {
 
 typedef struct Menu {
   bool basic_render;
+  AppTimer* scroll_timer;
   Window* window;
   char* title;
   TextLayer* title_layer;
@@ -28,10 +31,7 @@ typedef struct Menu {
   int section_count;
   MenuLayer* layer;
   void (*click)(MenuItem*, bool);
-  void (*on_load)(Window* window);
-  void (*on_unload)(Window* window);
-  void (*on_appear)(Window* window);
-  void (*on_disappear)(Window* window);
+  WindowHandlers window_handlers;
 } Menu;
 
 Menu* menu_create(char* title);
