@@ -36,7 +36,7 @@ uint16_t menu_row_count(struct MenuLayer *menu_layer, uint16_t section_index, vo
 int16_t menu_header_height(struct MenuLayer *menu_layer, uint16_t section_index, void *callback_context) {
   Menu* menu = (Menu*) callback_context;
   MenuSection* section = menu->sections[section_index];
-  return (section->title != NULL && section->item_count > 0) ? TITLE_HEIGHT : 0;
+  return (section->title != NULL && (section->item_count > 0 || section->always_show)) ? TITLE_HEIGHT : 0;
 }
 
 uint16_t menu_section_count(struct MenuLayer *menu_layer, void *callback_context) {
@@ -155,7 +155,18 @@ MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
 
 void menu_window_load(Window* window) {
   Menu* menu = (Menu*) window_get_user_data(window);
-  menu_layer_set_selected_index(menu->layer, (MenuIndex){0,0}, MenuRowAlignTop, false);
+  int section_not_empty = -1;
+  for (int i = 0; i < menu->section_count; i++) {
+    if (menu->sections[i]->item_count > 0) {
+      section_not_empty = i;
+      break;
+    }
+  }
+  
+  if (section_not_empty >= 0) {
+    menu_layer_set_selected_index(menu->layer, (MenuIndex){section_not_empty,0}, MenuRowAlignTop, false);
+    scroll_layer_set_content_offset(menu_layer_get_scroll_layer(menu->layer), (GPoint){0,0}, false);
+  }
   
   //Do something
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu window loaded: %p, %p", menu, menu->parent);

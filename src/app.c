@@ -29,16 +29,8 @@ static char* TIMER_MENU_TITLE = "Active Tasks";
 static char* TASK_MENU_TITLE = "Tasks";
 static char* RECENT_SECTION_TITLE = "Recent";
 static char* ALL_SECTION_TITLE = "All";
-
-static MenuItem LOADING_ITEM = {
-  .title = "Loading ...",
-  .id = -1
-};
-
-static MenuItem EMPTY_ITEM = {
-  .title = "Empty",
-  .id = -1
-};
+static char* LOADING_TEXT = "Loading ...";
+static char* EMPTY_TEXT = "No Items Found";
 
 static MenuItem ADD_TASK_ITEM = {
   .title = "Add Task",
@@ -72,11 +64,22 @@ static bool send_message(Action action, int count, ...) {
   return true;
 }
 
+static void menu_set_status(Menu* menu, uint16_t section_id, char* status) {
+  free_and_clear(menu->sections[section_id]->title);
+  if (status) {
+    menu->sections[section_id]->title = strdup(status);
+    menu->sections[section_id]->always_show = true;
+  } else {
+    menu->sections[section_id]->always_show = false;
+  }
+  menu_layer_reload_data(menu->layer);
+}
+
 static void reload_timers() {
   menu_close(project_menu);
   menu_close(task_menu);
   menu_empty(timer_menu);
-  menu_add_item(timer_menu, LOADING_ITEM, timer_status);
+  menu_set_status(timer_menu, timer_status, LOADING_TEXT);
   send_message(ActionTimerListFetch, 0);
   menu_open(timer_menu);
 }
@@ -86,8 +89,8 @@ static void open_project_menu() {
     project_menu->sections[project_all]->item_count == 0 &&
     project_menu->sections[project_recent]->item_count == 0
   ) {
-    send_message(ActionProjectListFetch, 0);  
-    menu_add_item(project_menu, LOADING_ITEM, project_status);
+    send_message(ActionProjectListFetch, 0);
+    menu_set_status(project_menu, project_status, LOADING_TEXT);  
   }
   menu_open(project_menu);
 }
@@ -97,7 +100,7 @@ static void project_select_handler(MenuItem* item, bool longPress) {
   
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Project selected: %p, %d %s",item, item->id, item->title);
   menu_empty(task_menu);
-  menu_add_item(task_menu, LOADING_ITEM, task_status);
+  menu_set_status(task_menu, task_status, LOADING_TEXT);  
   send_message(ActionTaskListFetch, 1, AppKeyProject, item->id);
   menu_open(task_menu);
 }
@@ -129,7 +132,7 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
 
   switch(action) {
     case ActionTimerListStart:
-      menu_empty_section(timer_menu, timer_status); //Remove loading
+      menu_set_status(timer_menu, timer_status, NULL); //Remove loading
       break;
             
     case ActionTimerListItemStart:      
@@ -161,8 +164,9 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
       
     case ActionTimerListEnd:
       if (timer_menu->sections[timer_list]->item_count == 0 ){
-        menu_add_item(timer_menu, EMPTY_ITEM, timer_status);
+        menu_set_status(timer_menu, timer_status, EMPTY_TEXT);
       }
+      
       menu_add_item(timer_menu, ADD_TASK_ITEM, timer_actions);
       break;
       
@@ -173,7 +177,7 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
 static void on_tasklist_build(DictionaryIterator *iter, Action action) {
   switch(action) {
     case ActionTaskListStart:
-      menu_empty_section(task_menu, task_status); //Remove loading 
+      menu_set_status(task_menu, task_status, NULL); //Remove loading 
       break;
       
     case ActionTaskListItem:
@@ -188,7 +192,7 @@ static void on_tasklist_build(DictionaryIterator *iter, Action action) {
         task_menu->sections[task_all]->item_count == 0 &&
         task_menu->sections[task_recent]->item_count == 0  
       ){
-        menu_add_item(task_menu, EMPTY_ITEM, task_status);
+        menu_set_status(task_menu, task_status, EMPTY_TEXT);
       }
 
       break;
@@ -200,7 +204,7 @@ static void on_tasklist_build(DictionaryIterator *iter, Action action) {
 static void on_projectlist_build(DictionaryIterator *iter, Action action) {
   switch(action) {
     case ActionProjectListStart:
-      menu_empty_section(project_menu, project_status); //Remove loading
+      menu_set_status(project_menu, project_status, NULL); //Remove loading 
       break;
       
     case ActionProjectListItem:     
@@ -215,7 +219,7 @@ static void on_projectlist_build(DictionaryIterator *iter, Action action) {
         project_menu->sections[project_all]->item_count == 0 &&
         project_menu->sections[project_recent]->item_count == 0  
       ){
-        menu_add_item(project_menu, EMPTY_ITEM, project_status);
+         menu_set_status(project_menu, project_status, EMPTY_TEXT);
       }
 
       break;

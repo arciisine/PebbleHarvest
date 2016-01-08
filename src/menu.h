@@ -13,6 +13,7 @@ typedef struct MenuItem {
 typedef struct MenuSection {
   char* title;
   int id;
+  bool always_show;
   uint16_t item_count;
   MenuItem* items[MAX_MENU_SIZE];
 } MenuSection;
