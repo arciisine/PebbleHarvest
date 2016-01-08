@@ -45,7 +45,7 @@ export enum Action {
 
 export let ActionNames:string[] = [${toArray(appKeys).map(x => !x ? 'null' : `"${x}"`).join(',\n')}];
 
-export enum AppKey {
-  ${entries(appKeys).map(x => `${x[0]} = ${x[1]}`).join(',\n')} 
-} AppKey;
+export let AppKey = {
+  ${entries(appKeys).map(x => `${x[0]} : "${x[0]}"`).join(',\n')} 
+};
 `);

@@ -52,20 +52,29 @@ export default class App extends MessageHandler {
 
   onError(e) {
     console.log("Error: ",e);
-    this.queue.pushMap(AppKey.Action, Action.Ready);  
+    this.queue.pushMap(AppKey.Action, Action.Error);  
   }
  
   @message(Action.ProjectListFetch)
   projectList(data:Pebble.MessagePayload) {
-    return this.harvest.getRecentProjectTaskMap().then(recent => {      
-      this.streamList(Action.ProjectListStart, Action.ProjectListItem, Action.ProjectListEnd,
-        this.harvest.getProjects(),
-        (p:ProjectModel) => Utils.buildMap( 
+    return this.harvest.getRecentProjectTaskMap().then(recent => {
+      this.harvest.getProjects().then(projs => {
+        projs.map(p => Utils.buildMap( 
+          AppKey.Action, Action.ProjectListItem,
           AppKey.Project, p.id,
           AppKey.Active, recent[p.id] !== undefined,
           AppKey.Name, p.name 
-        )
-      )
+        ))
+        .sort((a,b) => {
+          return a[AppKey.Active] === b[AppKey.Active] ? 
+            (a[AppKey.Name].toLowerCase().localeCompare(b[AppKey.Name].toLowerCase())) : 
+            (a[AppKey.Active]? -1 : 1);
+        })
+        .forEach(p => this.queue.push(p));
+        
+        this.queue.pushMap(AppKey.Action, Action.ProjectListStart);
+        this.queue.pushMap(AppKey.Action, Action.ProjectListEnd); 
+      });
     });
   }
   

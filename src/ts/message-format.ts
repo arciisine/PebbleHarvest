@@ -46,11 +46,11 @@ export let ActionNames:string[] = ["Ready",
 "TimerAdd",
 "TimerToggle"];
 
-export enum AppKey {
-  Action = 0,
-Project = 1,
-Task = 2,
-Timer = 3,
-Name = 4,
-Active = 5 
-} AppKey;
+export let AppKey = {
+  Action : "Action",
+Project : "Project",
+Task : "Task",
+Timer : "Timer",
+Name : "Name",
+Active : "Active" 
+};

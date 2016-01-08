@@ -240,7 +240,7 @@ static void timer_toggle(DictionaryIterator *iter) {
 }
 
 static void on_message(DictionaryIterator *iter, void *context) {
-  Action action = (Action) dict_find(iter, AppKeyAction)->value->uint32;
+  Action action = dict_key_int(iter, AppKeyAction);
 
   const char* actionName = ActionNames[action];
 
@@ -295,13 +295,20 @@ static void main_menu_load(Window *window) {}
 static void main_menu_unload(Window *window) {}
 static void main_menu_appear(Window *window) {}
 
+static void init_message() {
+  //Initialize Message Screen
+  message_screen = window_create();
+  Layer* root = window_get_root_layer(message_screen);
+  GRect bounds = layer_get_frame(root);  
+  message_text = text_layer_create((GRect){.size={bounds.size.w, bounds.size.h-20}, .origin={0, 20}});
+  text_layer_set_font(message_text, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(message_text, GTextAlignmentCenter);  
+  layer_add_child(root, text_layer_get_layer(message_text));
+
+  message_show(LOADING_TEXT);
+}
+
 static void init(void) {
-  // Register message handlers
-  app_message_register_inbox_received(on_message);
-  
-  // Init buffers
-  app_message_open(120, 120);
-  
   //Init Timer Menu
   timer_menu = menu_create(TIMER_MENU_TITLE);
   timer_menu->click = timer_select_handler;
@@ -340,16 +347,13 @@ static void init(void) {
   checkmark_inactive = gbitmap_create_with_resource(RESOURCE_ID_CHECK_INACTIVE);
   plus_icon = gbitmap_create_with_resource(RESOURCE_ID_PLUS);   
 
-  //Initialize Message Screen
-  message_screen = window_create();
-  Layer* root = window_get_root_layer(message_screen);
-  GRect bounds = layer_get_frame(root);  
-  message_text = text_layer_create((GRect){.size={bounds.size.w, bounds.size.h-20}, .origin={0, 20}});
-  text_layer_set_font(message_text, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(message_text, GTextAlignmentCenter);  
-  layer_add_child(root, text_layer_get_layer(message_text));
-
-  message_show(LOADING_TEXT);
+  init_message();
+    
+  // Register message handlers
+  app_message_register_inbox_received(on_message);
+  
+  // Init buffers
+  app_message_open(120, 120);
 }
 
 static void deinit(void) {

@@ -151,14 +151,6 @@ void menu_select_long_click(MenuLayer* menu_layer, MenuIndex* index, void* data)
    menu->click(menu->sections[index->section]->items[index->row], true); 
 }
 
-void menu_open(Menu* menu) {
-  window_stack_push(menu->window, true);
-}
-
-void menu_close(Menu* menu) {
-  window_stack_remove(menu->window, true);
-}
-
 MenuSection* menu_add_section(Menu* menu, char* title) {
   MenuSection* section = menu->sections[menu->section_count];
   if (section == NULL) {
@@ -282,6 +274,28 @@ void menu_selection_will_change(struct MenuLayer *menu_layer, MenuIndex* new_ind
   }
 }
 
+MenuLayerCallbacks MENU_CALLBACKS = {
+  .get_num_rows = menu_row_count,
+  .get_num_sections = menu_section_count,
+  .get_header_height = menu_header_height,
+  .get_cell_height = menu_cell_height,
+  .draw_row = menu_draw_row,
+  .draw_header = menu_draw_header,
+  .selection_changed = menu_selection_changed,
+  .selection_will_change = menu_selection_will_change,
+  .select_click = menu_select_click,
+  .select_long_click = menu_select_long_click
+};
+
+void menu_open(Menu* menu) {
+  menu_layer_set_callbacks(menu->layer, menu, MENU_CALLBACKS);  
+  window_stack_push(menu->window, true);
+}
+
+void menu_close(Menu* menu) {
+  window_stack_remove(menu->window, true);
+}
+
 void menu_force_selection_change_on_current(Menu* menu) {
   MenuIndex index = menu_layer_get_selected_index(menu->layer);
   menu_selection_will_change(menu->layer, &(MenuIndex) {index.section, index.row}, index,  menu);
@@ -331,23 +345,9 @@ Menu* menu_create(char* title) {
   
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Setting menu callbacks: %p", menu);
   
-  menu_layer_set_callbacks(menu->layer, menu, (MenuLayerCallbacks) {
-    .get_num_rows = menu_row_count,
-    .get_num_sections = menu_section_count,
-    .get_header_height = menu_header_height,
-    .get_cell_height = menu_cell_height,
-    .draw_row = menu_draw_row,
-    .draw_header = menu_draw_header,
-    .selection_changed = menu_selection_changed,
-    .selection_will_change = menu_selection_will_change,
-    .select_click = menu_select_click,
-    .select_long_click = menu_select_long_click
-  });
-  
-  menu_layer_set_click_config_onto_window(menu->layer, menu->window);
-        
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, menu: %p", menu); 
-  
+  menu_layer_set_click_config_onto_window(menu->layer, menu->window);
+
   return menu;  
 }
 

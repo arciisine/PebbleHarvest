@@ -7,12 +7,12 @@ export function message(key:number|string) {
 
 export default class MessageHandler {
   _handlers:{[key:string] : Pebble.Handler} = {};
-  appKey:string = null;
-  actionKeyTranslator:(any) => string = null;
+  actionProperty:string = null;
+  actionIdLookup:(any) => string = null;
   
-  constructor(appKey:number|string, actionKeyTranslator?:(any) => string) {
-    this.appKey = `${appKey}`;
-    this.actionKeyTranslator = actionKeyTranslator;
+  constructor(actionProperty:number|string, actionIdLookup?:(any) => string) {
+    this.actionProperty = `${actionProperty}`;
+    this.actionIdLookup = actionIdLookup;
    
     //Auto register
     for (let k in this) {
@@ -30,9 +30,9 @@ export default class MessageHandler {
       
   onMessage(e:Pebble.Message):void {
     let data = e.payload;
-    let key:string|number = this.translateKey(data[this.appKey]);
+    let key:string|number = this.translateKey(data[this.actionProperty]);
     
-    console.log(JSON.stringify(data));
+    console.log(`Received: ${key}: ${JSON.stringify(data)}`);
     
     if (this._handlers[key]) {
       let ret = this._handlers[key].call(this, data);
@@ -42,7 +42,7 @@ export default class MessageHandler {
         ret.then(null, this.onError);
       }
     } else {
-      this.onError("Unknown action:" + key);
+      this.onError(`Unknown action: ${key}`);
     }
   }
 
@@ -51,8 +51,8 @@ export default class MessageHandler {
   }
   
   translateKey(key:number|string):string {
-    if (this.actionKeyTranslator) {
-      return this.actionKeyTranslator(key);
+    if (this.actionIdLookup) {
+      return this.actionIdLookup(key);
     } else {
       return '' + key;
     }
