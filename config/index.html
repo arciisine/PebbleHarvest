@@ -5,6 +5,9 @@
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport">
 
     <link href="./css/slate.min.css" rel="stylesheet">
+    <style>
+       .authorized, .unauthorized { display: none }
+    </style>
     <script src="./js/slate.min.js"></script>
     <script src="./config.js"></script>
     <script>
@@ -20,6 +23,7 @@
           window.location.hash = '';
         }
         config.setRedirectLocation();
+        config.updateDisplay();
       }
       window.onbeforeunload = function() {
         config.writeOptions(config.formToOptions());                                
@@ -54,17 +58,22 @@
     </form>
 
     <form name="token" method="GET" action="https://api.harvestapp.com/oauth2/authorize">
-      <!--input type="text" class="option" name="domain" placeholder="example" onchange="config.setFormAction()" -->
       <input type="hidden" name="client_id" value="RRWPBGSv4UCC9c2lBd48ug">
       <input type="hidden" name="state" value="optional-csrf-token">
       <input type="hidden" name="response_type" value="token">
       <input type="hidden" name="redirect_uri">
       
-      <div class="item-container">
+      <div class="item-container unauthorized">
         <div class="button-container">
           <button type="submit" class="item-button">Authorize</button>
         </div>
-      </div>
+      </div>      
     </form>
+    
+    <div class="item-container authorized">
+      <div class="button-container">
+        <button type="button" class="item-button" onclick="config.deauthorize()">De-Authorize</button>
+      </div>
+    </div>      
   </body>
 </html>

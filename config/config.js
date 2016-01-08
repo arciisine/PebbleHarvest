@@ -30,9 +30,21 @@ window.config = (function() {
       setRedirectLocation : function() {
         document.querySelector('form input[name="redirect_uri"]').value = ('' + window.location);  
       },
-      setFormAction : function() {
-        var domain =  document.querySelector('form input[name=domain]').value;
-        document.querySelector('form').action = 'https://' + domain + '.harvestapp.com/oauth2/authorize';                  
+      deauthorize : function() {
+        config.optionsToForm({
+          'oauth.expires_in' : null,
+          'oauth.access_token' : null
+        });
+        config.updateDisplay();
+      },
+      updateDisplay : function() {
+        var authorized = (!!document.querySelector('form[name="oauth"] input[name="access_token"]').value) ? 'authorized' : 'unauthorized';
+        ['unauthorized', 'authorized'].forEach(function(k) {
+          var items = document.querySelectorAll('.'+k);
+          for (var i = 0; i < items.length;i++) {
+            items[i].style.display = authorized == k ? 'block' : 'none';
+          }
+        });
       },
       optionsToForm : function(opts) {
         if (typeof opts === 'string') {
@@ -45,7 +57,7 @@ window.config = (function() {
         for (var i = 0; i < inputs.length; i++) {
           var key = inputs[i].form.name + '.' + inputs[i].name;
           console.log('|'+key+'|', opts[key]);
-          if (opts[key]) {
+          if (opts[key] !== undefined) {
             this.options[key] = inputs[i].value = opts[key];
             inputs[i].dispatchEvent(new Event("change"))
           }
