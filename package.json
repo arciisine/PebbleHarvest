@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build" : "node --harmony --use_strict compile-ts-app.js",
+    "build-js" : "node --harmony --use_strict compile-ts-app.js",
+    "build-pebble" : "pebble clean && pebble build",
+    "build-all" : "npm run-script build-js && npm run-script build-pebble",
     "gen-message-format" : "node --harmony --use_strict message-format-builder.js"
   },
   "repository": {
