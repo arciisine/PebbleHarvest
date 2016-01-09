@@ -1,4 +1,5 @@
 #pragma once
+#include <pebble.h>
 #include "common.h"
 
 #define MAX_MENU_SIZE 200
@@ -10,6 +11,7 @@ typedef struct MenuItem {
   int id;
   GSize size;
   GBitmap* icon;
+  void* data;
 } MenuItem;
 
 typedef struct MenuSection {

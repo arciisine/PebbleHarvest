@@ -16,11 +16,11 @@ ActionTaskListEnd = 10,
 ActionTimerListReload = 11,
 ActionTimerListFetch = 12,
 ActionTimerListStart = 13,
-ActionTimerListEnd = 14,
-ActionTimerListItemStart = 15,
-ActionTimerListItemProjectName = 16,
-ActionTimerListItemTaskName = 17,
-ActionTimerListItemEnd = 18,
+ActionTimerListItemStart = 14,
+ActionTimerListItemProjectName = 15,
+ActionTimerListItemTaskName = 16,
+ActionTimerListItemEnd = 17,
+ActionTimerListEnd = 18,
 ActionTimerAdd = 19,
 ActionTimerToggle = 20 
 } Action;
@@ -31,7 +31,8 @@ AppKeyProject = 1,
 AppKeyTask = 2,
 AppKeyTimer = 3,
 AppKeyName = 4,
-AppKeyActive = 5 
+AppKeyActive = 5,
+AppKeySeconds = 6 
 } AppKey;
 
 const char* ActionNames[] = { "Ready",
@@ -48,11 +49,11 @@ const char* ActionNames[] = { "Ready",
 "TimerListReload",
 "TimerListFetch",
 "TimerListStart",
-"TimerListEnd",
 "TimerListItemStart",
 "TimerListItemProjectName",
 "TimerListItemTaskName",
 "TimerListItemEnd",
+"TimerListEnd",
 "TimerAdd",
 "TimerToggle"};
 

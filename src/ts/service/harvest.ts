@@ -28,40 +28,59 @@ export default class HarvestService extends BaseService {
     return this.get('/account/who_am_i');
   }
   
-  getTimers():Promise<TimerModel> {
-    let seen = {}; 
-    let def = new Deferred<TimerModel>();
+  getTimers():Promise<TimerModel[]> {
+    let def = new Deferred<TimerModel[]>();
     
-    this.get('/daily').then(assignments => {
+    this.get('/daily').then(assignments => {      
+      let all = {}, flattened:TimerModel[] = [];
       
-      let active = assignments.day_entries
-        .map(a => {
-          a.updated_at = Date.parse(a.updated_at);
-          if (!!a.timer_started_at) {
-            a.updated_at += 3600 * 60;
-          }
-          return a;
-        })
-        .sort((a:any,b:any) => b.updated_at - a.updated_at)
-        .map(x => {
-          let key = `${x.project_id}||${x.task_id}`;
-          if (!seen[key]) { 
-            seen[key] = true;
-            let out = new TimerModel();
+      //Flatten Entries
+      assignments.day_entries.forEach(x => {
+        x.updated_at = Date.parse(x.updated_at) + (!!x.timer_started_at ? 3600 * 60 : 0);
+        
+        let key = `${x.project_id}||${x.task_id}`;
+        if (!all[key]) { //Create 
+          let out = new TimerModel();
+          out.active = !!x.timer_started_at;
+          out.projectId = x.project_id;
+          out.projectTitle = x.project;
+          out.taskId = x.task_id;
+          out.taskTitle = x.task;
+          out.id = x.id;
+          out.updated_at = x.updated_at; 
+          out.hours = x.hours;
+          all[key] = out;
+          flattened.push(out);
+        } else {//Merge
+          let out = all[key].hours;
+          out += x.hours;
+          
+          if (!out.active && x.updated_at > out.updated_at) {
+            out.id = x.id;            
             out.active = !!x.timer_started_at;
-            out.projectId = x.project_id;
-            out.projectTitle = x.project;
-            out.taskId = x.task_id;
-            out.taskTitle = x.task;
-            out.id = x.id;
-            return out;
+            out.updated_at = x.updated_at;
           }
-        })
-        .filter(x => !!x);
+        }
+      });
       
-      def.resolve(active);
+      flattened = flattened.sort((a,b) => b.updated_at - a.updated_at);
+      
+      def.resolve(flattened);
     }, def.reject);
     
+    return def.promise();
+  }
+  
+  getTimer(id:number):Promise<TimerModel> {
+    let def = new Deferred<TimerModel>();
+    this.getTimers().then(timers => {
+      for (let i = 0; i < timers.length;i++) {
+        if (timers[i].id === id) {
+          def.resolve(timers[i]);
+        }
+      }
+      def.reject(`Cannot find timer with id: ${id}`);
+    }, def.reject);
     return def.promise();
   }
   
@@ -104,7 +123,7 @@ export default class HarvestService extends BaseService {
   }
   
   toggleTimer(entryId:number):Promise<any> {  
-    return this.post('/daily/timer/'+entryId);
+    return this.post(`/daily/timer/${entryId}`);
   }
   
   @memoize(DAY)
@@ -168,7 +187,7 @@ export default class HarvestService extends BaseService {
     let def = new Deferred<TaskModel[]>();
     
     this.getTaskMap().then(taskMap => {
-      this.get('/projects/' + projectId + '/task_assignments').then(tp => {
+      this.get(`/projects/${projectId}/task_assignments`).then(tp => {
         let models:TaskModel[] = null;
         if (tp && tp.length) {
           models = tp

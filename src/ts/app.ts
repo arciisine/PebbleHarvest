@@ -81,15 +81,15 @@ export default class App extends MessageHandler {
   @message(Action.TimerListFetch)
   timerList(data:Pebble.MessagePayload) {
     return this.harvest.getTimers().then(items => {
-      this.queue.pushMap(AppKey.Action, Action.TimerListStart);
-      
+      this.queue.pushMap(AppKey.Action, Action.TimerListStart);      
       items.forEach(t => {
         this.queue.pushMap(
           AppKey.Action, Action.TimerListItemStart,
           AppKey.Timer, t.id,
           AppKey.Project, t.projectId,
           AppKey.Task, t.taskId,
-          AppKey.Active, t.active
+          AppKey.Active, t.active,
+          AppKey.Seconds, parseInt(''+(t.hours * 60 * 60)) 
         );
         this.queue.pushMap(
           AppKey.Action, Action.TimerListItemProjectName,
@@ -101,7 +101,6 @@ export default class App extends MessageHandler {
         );
         this.queue.pushMap(AppKey.Action, Action.TimerListItemEnd);
       });
-      
       this.queue.pushMap(AppKey.Action, Action.TimerListEnd);
     });
   }

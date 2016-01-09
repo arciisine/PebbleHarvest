@@ -1,13 +1,9 @@
+#include <pebble.h>
 #include "common.h"
+#include "app.h"
 #include "message_format.h"
 #include "menu.h"
 #include <stdarg.h>
-
-typedef struct Sections {
-  int status;
-  int primary;
-  int alternate; 
-} Sections;
 
 static Menu *project_menu;
 static Menu *task_menu;
@@ -29,6 +25,8 @@ static char* TASK_MENU_TITLE = "Tasks";
 static char* OLDER_SECTION_TITLE = "Older";
 static char* LOADING_TEXT = "Loading ...";
 static char* EMPTY_TEXT = "No Items Found";
+
+static MenuItem* active_item;
 
 static bool menu_is_empty(Menu* menu, Sections sections) {
    return menu->sections[sections.alternate]->item_count == 0 && menu->sections[sections.primary]->item_count == 0 ;
@@ -74,7 +72,7 @@ static void timer_menu_open() {
   window_stack_pop_all(false);
   menu_open(timer_menu);
   menu_set_status(timer_menu, timer_sections.status, LOADING_TEXT);
-  send_message(ActionTimerListFetch, 0);
+  send_message(ActionTimerListFetch, 0);  
 }
 
 static void message_show(char* text) {
@@ -123,32 +121,77 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
   }
 }
 
-static void on_timerlist_build(DictionaryIterator *iter, Action action) {
-  static MenuItem* buffered_timer;
+int max(int a, int b) { return a< b ? b : a; }
 
+static void timer_active_count(struct tm *tick_time, TimeUnits units_changed) {
+  if (active_item) {
+    TaskTimer* timer = (TaskTimer*)active_item->data;
+    if (units_changed == MINUTE_UNIT) {
+      timer->seconds += 60;
+      snprintf(active_item->subtitle, max(strlen(active_item->subtitle), 9), "%02d:%02d", 
+        (timer->seconds / 3600) % 60, 
+        (timer->seconds / 60) % 60
+      );
+    }
+    menu_layer_reload_data(timer_menu->layer);
+  }
+}
+
+static void timer_list_sync_state() {
+  active_item = NULL;
+  tick_timer_service_unsubscribe();
+  
+  MenuSection* timers = timer_menu->sections[timer_sections.primary];
+
+  for (int i = 0; i < timers->item_count; i++) {
+    MenuItem* item = timers->items[i];
+    TaskTimer* timer = (TaskTimer*)item->data;
+    
+    if (timer->active) {
+      active_item = item;
+      item->icon = checkmark_active;
+      tick_timer_service_subscribe(MINUTE_UNIT, timer_active_count);
+      timer_active_count(NULL, MINUTE_UNIT);
+    } else {
+      item->icon = checkmark_inactive;
+      strcpy(item->subtitle, timer->task);
+    }
+  }
+  
+  menu_layer_reload_data(timer_menu->layer);
+}
+
+static void on_timerlist_build(DictionaryIterator *iter, Action action) {
+  static TaskTimer* buffered_timer;
+  
   switch(action) {
     case ActionTimerListStart:
       break;
             
     case ActionTimerListItemStart:      
-      buffered_timer = (MenuItem*) malloc(sizeof(MenuItem));
-      buffered_timer->id = dict_key_int(iter, AppKeyTimer);
-      buffered_timer->icon = dict_key_bool(iter, AppKeyActive) ? checkmark_active : checkmark_inactive;
+      buffered_timer = (TaskTimer*) malloc(sizeof(MenuItem));
+      buffered_timer->id = dict_key_int(iter, AppKeyTimer);      
+      buffered_timer->active = dict_key_bool(iter, AppKeyActive);
+      buffered_timer->seconds = dict_key_int(iter, AppKeySeconds);
       break;
       
     case ActionTimerListItemProjectName:
-      buffered_timer->title = strdup(dict_key_str(iter, AppKeyName));
+      buffered_timer->project = strdup(dict_key_str(iter, AppKeyName));
       break;
       
     case ActionTimerListItemTaskName:
-      buffered_timer->subtitle = strdup(dict_key_str(iter, AppKeyName));
+      buffered_timer->task = strdup(dict_key_str(iter, AppKeyName));
       break;
       
     case ActionTimerListItemEnd:
-      menu_add_item(timer_menu, *buffered_timer, timer_sections.primary);
-      free_and_clear(buffered_timer->title);
-      free_and_clear(buffered_timer->subtitle);
-      free_and_clear(buffered_timer);
+      menu_add_item(timer_menu, (MenuItem) {
+        .id = buffered_timer->id,
+        .title = buffered_timer->project,
+        .subtitle = buffered_timer->task,
+        .data = buffered_timer 
+      }, timer_sections.primary);
+      
+      buffered_timer = NULL;
       
       //If first item
       if (timer_menu->sections[timer_sections.primary]->item_count  == 1) {
@@ -163,6 +206,8 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
       } else {
         menu_set_status(timer_menu, timer_sections.status, NULL); //Remove loading
       }
+      
+      timer_list_sync_state();
       
       menu_add_item(timer_menu, (MenuItem) {
         .title = "Add Task",
@@ -200,6 +245,7 @@ static void on_tasklist_build(DictionaryIterator *iter, Action action) {
   }    
 }
 
+
 static void on_projectlist_build(DictionaryIterator *iter, Action action) {
   switch(action) {
     case ActionProjectListStart:
@@ -233,10 +279,22 @@ static void timer_toggle(DictionaryIterator *iter) {
   
   for (int i = 0; i < timers->item_count; i++) {
     MenuItem* item = timers->items[i];
-    item->icon = (item->id == id && active) ? checkmark_active : checkmark_inactive;    
+    TaskTimer* timer = (TaskTimer*) item->data;
+    timer->active = (item->id == id && active); 
   }
   
-  menu_layer_reload_data(timer_menu->layer);  
+  timer_list_sync_state();
+}
+
+static void menu_free_timer_data() {
+  MenuSection* timers = timer_menu->sections[timer_sections.primary];  
+  for (int i = 0; i < MAX_MENU_SIZE; i++) {
+    MenuItem* item = timers->items[i];
+    TaskTimer* timer = (TaskTimer*)item->data;
+    free_and_clear(timer->project);
+    free_and_clear(timer->task);
+    free_and_clear(timers->items[i]);        
+  }  
 }
 
 static void on_message(DictionaryIterator *iter, void *context) {
@@ -293,7 +351,12 @@ static void on_message(DictionaryIterator *iter, void *context) {
 
 static void main_menu_load(Window *window) {}
 static void main_menu_unload(Window *window) {}
-static void main_menu_appear(Window *window) {}
+static void main_menu_appear(Window *window) {
+  timer_list_sync_state();
+}
+static void main_menu_disappear(Window *window) {
+  tick_timer_service_unsubscribe();
+}
 
 static void init_message() {
   //Initialize Message Screen
@@ -323,6 +386,7 @@ static void init(void) {
   timer_menu->window_handlers.appear = main_menu_appear;
   timer_menu->window_handlers.load = main_menu_load;
   timer_menu->window_handlers.unload = main_menu_unload;
+  timer_menu->window_handlers.disappear = main_menu_disappear;
   
   //Init project menu
   project_menu = menu_create(PROJECT_MENU_TITLE);
@@ -357,6 +421,8 @@ static void init(void) {
 }
 
 static void deinit(void) {
+  menu_free_timer_data(timer_menu);
+  
   //Destroy menu
   menu_destroy(timer_menu);
   menu_destroy(project_menu);

@@ -18,7 +18,8 @@
     "Task" : 2,
     "Timer" : 3,
     "Name" : 4,
-    "Active" : 5
+    "Active" : 5,
+    "Seconds" : 6
   },
   "actionKeys" : [
     "Ready",
@@ -38,15 +39,14 @@
     "TimerListReload",
     "TimerListFetch",
     "TimerListStart",
-    "TimerListEnd",
-
     "TimerListItemStart",
     "TimerListItemProjectName",
     "TimerListItemTaskName",
-    "TimerListItemEnd",
+    "TimerListItemEnd",    
+    "TimerListEnd",
 
     "TimerAdd",
-    "TimerToggle" 
+    "TimerToggle"
   ],
   "resources": {
     "media": [      

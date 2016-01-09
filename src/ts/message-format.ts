@@ -15,11 +15,11 @@ TaskListEnd = 10,
 TimerListReload = 11,
 TimerListFetch = 12,
 TimerListStart = 13,
-TimerListEnd = 14,
-TimerListItemStart = 15,
-TimerListItemProjectName = 16,
-TimerListItemTaskName = 17,
-TimerListItemEnd = 18,
+TimerListItemStart = 14,
+TimerListItemProjectName = 15,
+TimerListItemTaskName = 16,
+TimerListItemEnd = 17,
+TimerListEnd = 18,
 TimerAdd = 19,
 TimerToggle = 20
 }
@@ -38,11 +38,11 @@ export let ActionNames:string[] = ["Ready",
 "TimerListReload",
 "TimerListFetch",
 "TimerListStart",
-"TimerListEnd",
 "TimerListItemStart",
 "TimerListItemProjectName",
 "TimerListItemTaskName",
 "TimerListItemEnd",
+"TimerListEnd",
 "TimerAdd",
 "TimerToggle"];
 
@@ -52,5 +52,6 @@ Project : "Project",
 Task : "Task",
 Timer : "Timer",
 Name : "Name",
-Active : "Active" 
+Active : "Active",
+Seconds : "Seconds" 
 };

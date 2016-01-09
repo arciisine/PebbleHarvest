@@ -184,6 +184,7 @@ MenuItem* menu_add_item(Menu* menu, MenuItem item, uint16_t section_id) {
   copy->id = item.id;
   copy->icon = item.icon;
   copy->scroll_offset = 0;
+  copy->data = item.data;
   
   //Update size
   copy->size = graphics_text_layout_get_content_size(
