@@ -29,7 +29,7 @@ typedef struct Menu {
   char* title;
   TextLayer* title_layer;
   Layer* parent;
-  MenuSection* sections[MAX_MENU_SIZE];
+  MenuSection* sections[20];
   int section_count;
   MenuLayer* layer;
   void (*click)(MenuItem*, bool);

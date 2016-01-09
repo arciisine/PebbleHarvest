@@ -25,6 +25,7 @@ static char* TASK_MENU_TITLE = "Tasks";
 static char* OLDER_SECTION_TITLE = "Older";
 static char* LOADING_TEXT = "Loading ...";
 static char* EMPTY_TEXT = "No Items Found";
+static int ADD_TASK_KEY = -2;
 
 static MenuItem* active_item;
 
@@ -116,7 +117,7 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
     timer_menu_open();
   } else if (item->id > 0) {
     send_message(ActionTimerToggle, 1, AppKeyTimer, item->id);
-  } else if (item->id == -2) {
+  } else if (item->id == ADD_TASK_KEY) {
     project_menu_open();
   }
 }
@@ -198,6 +199,7 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
         .data = buffered_timer 
       }, timer_sections.primary);
       
+      //Don't deallocate, system will manage .data values in menu_free_timer_data
       buffered_timer = NULL;
       
       //If first item
@@ -218,7 +220,7 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
       
       menu_add_item(timer_menu, (MenuItem) {
         .title = "Add Task",
-        .id = -2,
+        .id = ADD_TASK_KEY,
         .icon = plus_icon
       }, timer_sections.alternate);
       break;
@@ -297,10 +299,14 @@ static void menu_free_timer_data() {
   MenuSection* timers = timer_menu->sections[timer_sections.primary];  
   for (int i = 0; i < MAX_MENU_SIZE; i++) {
     MenuItem* item = timers->items[i];
-    TaskTimer* timer = (TaskTimer*)item->data;
-    free_and_clear(timer->project);
-    free_and_clear(timer->task);
-    free_and_clear(timers->items[i]);        
+    if (item != NULL) {
+      TaskTimer* timer = (TaskTimer*)item->data;
+      if (timer != NULL) {
+        free_and_clear(timer->project);
+        free_and_clear(timer->task);
+        free_and_clear(item->data);        
+      }
+    }
   }  
 }
 
@@ -357,7 +363,9 @@ static void on_message(DictionaryIterator *iter, void *context) {
 
 
 static void main_menu_load(Window *window) {}
-static void main_menu_unload(Window *window) {}
+static void main_menu_unload(Window *window) {
+  menu_free_timer_data(timer_menu);
+}
 static void main_menu_appear(Window *window) {
   timer_list_sync_state();
 }
@@ -428,8 +436,6 @@ static void init(void) {
 }
 
 static void deinit(void) {
-  menu_free_timer_data(timer_menu);
-  
   //Destroy menu
   menu_destroy(timer_menu);
   menu_destroy(project_menu);
