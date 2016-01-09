@@ -112,10 +112,10 @@ static void task_select_handler(MenuItem* item, bool longPress) {
 
 static void timer_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer selected: %p, %d %s",item, item->id, item->title);
-  if (item->id > 0) {
-    if (!longPress) {
-      send_message(ActionTimerToggle, 1, AppKeyTimer, item->id);
-    }
+  if (longPress) {
+    timer_menu_open();
+  } else if (item->id > 0) {
+    send_message(ActionTimerToggle, 1, AppKeyTimer, item->id);
   } else if (item->id == -2) {
     project_menu_open();
   }
@@ -124,17 +124,24 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
 int max(int a, int b) { return a< b ? b : a; }
 
 static void timer_active_count(struct tm *tick_time, TimeUnits units_changed) {
-  if (active_item) {
-    TaskTimer* timer = (TaskTimer*)active_item->data;
-    if (units_changed == MINUTE_UNIT) {
+  if (active_item == NULL) return;
+  
+  TaskTimer* timer = (TaskTimer*)active_item->data;
+
+  if ((units_changed & MINUTE_UNIT) > 0) {
+    if (tick_time != NULL) {
       timer->seconds += 60;
-      snprintf(active_item->subtitle, max(strlen(active_item->subtitle), 9), "%02d:%02d", 
-        (timer->seconds / 3600) % 60, 
-        (timer->seconds / 60) % 60
-      );
+      //Flatten to minutes
+      timer->seconds -= timer->seconds % 60;      
     }
-    menu_layer_reload_data(timer_menu->layer);
+    
+    snprintf(active_item->subtitle, max(strlen(active_item->subtitle), 9), "%02d:%02d", 
+      (timer->seconds / 3600) % 60, 
+      (timer->seconds / 60) % 60
+    );
   }
+  
+  menu_layer_reload_data(timer_menu->layer);
 }
 
 static void timer_list_sync_state() {
