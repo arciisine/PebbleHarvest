@@ -25,18 +25,18 @@ class Accumulator {
       if (!this.all[key]) { //Create 
         let out = new TimerModel();
         out.active = previous ? false : !!x.timer_started_at;
-        out.projectId = x.project_id;
+        out.projectId = parseInt(x.project_id);
         out.projectTitle = x.project;
-        out.taskId = x.task_id;
+        out.taskId = parseInt(x.task_id);
         out.taskTitle = x.task;
         out.id = previous ? 0 : x.id;
         out.updated_at = x.updated_at; 
-        out.hours = previous ? 0 : x.hours;
+        out.hours = previous ? 0 : parseFloat(x.hours);
         this.all[key] = out;
         this.flattened.push(out);
       } else if (!previous) {//Merge
         let out = this.all[key].hours;
-        out += x.hours;
+        out += parseFloat(x.hours);
         
         if (!out.active && x.updated_at > out.updated_at) {
           out.id = x.id;            

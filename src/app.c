@@ -25,11 +25,11 @@ static char* TASK_MENU_TITLE = "Tasks";
 static char* OLDER_SECTION_TITLE = "Older";
 static char* LOADING_TEXT = "Loading ...";
 static char* EMPTY_TEXT = "No Items Found";
-static int ADD_TASK_KEY = -2;
+static uint32_t ADD_TASK_KEY = 2;
 
 static MenuItem* active_item;
 
-static int dict_key_int(DictionaryIterator* itr, uint16_t key) {
+static uint32_t dict_key_int(DictionaryIterator* itr, uint16_t key) {
   Tuple* t = dict_find(itr, key);
   return t == NULL ? 0 : t->value->uint32;
 } 
@@ -106,9 +106,9 @@ static void project_menu_open() {
 }
 
 static void project_select_handler(MenuItem* item, bool longPress) {
-  if (item->id < 0) return;
+  if (item->id == 0) return;
   
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Project selected: %p, %d %s",item, item->id, item->title);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Project selected: %p, %d %s",item, (int) item->id, item->title);
   menu_empty(task_menu);
   menu_set_status(task_menu, task_sections.status, LOADING_TEXT);  
   send_message(ActionTaskListFetch, 1, AppKeyProject, item->id);
@@ -116,9 +116,9 @@ static void project_select_handler(MenuItem* item, bool longPress) {
 }
 
 static void task_select_handler(MenuItem* item, bool longPress) {
-  if (item->id < 0) return;
+  if (item->id == 0) return;
   
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Task selected: %p, %d %s",item, item->id, item->title);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Task selected: %p, %d %s",item, (int) item->id, item->title);
    
   send_message(ActionTimerAdd, 2, 
     AppKeyProject, menu_get_selected_item(project_menu)->id,
@@ -127,9 +127,11 @@ static void task_select_handler(MenuItem* item, bool longPress) {
 }
 
 static void timer_select_handler(MenuItem* item, bool longPress) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer selected: %p, %d %s",item, item->id, item->title);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer selected: %p, %d %s",item, (int) item->id, item->title);  
   if (longPress) {
     timer_menu_open();
+  } else if (item->id == ADD_TASK_KEY) {
+    project_menu_open();
   } else if (item->id == 0) {
     TaskTimer* timer = (TaskTimer*) item->data;
     send_message(ActionTimerAdd, 3,
@@ -139,8 +141,6 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
     );
   } else if (item->id > 0) {
     send_message(ActionTimerToggle, 1, AppKeyTimer, item->id);
-  } else if (item->id == ADD_TASK_KEY) {
-    project_menu_open();
   }
 }
 
@@ -306,7 +306,7 @@ static void on_projectlist_build(DictionaryIterator *iter, Action action) {
 }
 
 static void timer_toggle(DictionaryIterator *iter) {
-  int id = dict_key_int(iter, AppKeyTimer);
+  uint32_t id = dict_key_int(iter, AppKeyTimer);
   bool active = dict_key_bool(iter, AppKeyActive);
   MenuSection* timers = timer_menu->sections[timer_sections.primary];
   
@@ -322,6 +322,8 @@ static void timer_toggle(DictionaryIterator *iter) {
 static void timer_created(DictionaryIterator *iter) {
   int id = dict_key_int(iter, AppKeyTimer);
   MenuItem* item = menu_get_selected_item(timer_menu);
+  item->id = id;
+  
   TaskTimer* timer = ((TaskTimer*)item->data);
   timer->id = id;
   timer->active = true;  

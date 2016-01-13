@@ -7,7 +7,7 @@ typedef struct Sections {
 } Sections;
 
 typedef struct TaskTimer {
-  uint16_t id;
+  uint32_t id;
   char* project;
   uint32_t projectId;
   char* task;
@@ -16,6 +16,6 @@ typedef struct TaskTimer {
   int seconds;
 } TaskTimer;
 
-static int dict_key_int(DictionaryIterator*, uint16_t);
+static uint32_t dict_key_int(DictionaryIterator*, uint16_t);
 static char* dict_key_str(DictionaryIterator*, uint16_t);
 static bool dict_key_bool(DictionaryIterator*, uint16_t);

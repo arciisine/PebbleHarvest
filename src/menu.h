@@ -8,7 +8,7 @@ typedef struct MenuItem {
   char* title;
   char* subtitle;
   int scroll_offset;
-  int id;
+  uint32_t id;
   GSize size;
   GBitmap* icon;
   void* data;
@@ -16,7 +16,7 @@ typedef struct MenuItem {
 
 typedef struct MenuSection {
   char* title;
-  int id;
+  uint16_t id;
   bool always_show;
   uint16_t item_count;
   MenuItem* items[MAX_MENU_SIZE];

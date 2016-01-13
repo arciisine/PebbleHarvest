@@ -12,8 +12,10 @@ export default class BaseRest {
       req.setRequestHeader('Content-Type', 'application/json');
     }
     req.onload = function(e) {
-      if(req.status >= 200 && req.status < 400) {      
-        def.resolve(JSON.parse(req.response));
+      if(req.status >= 200 && req.status < 400) {
+        let res = JSON.parse(req.response);
+        console.log(req.response);      
+        def.resolve(res);
       } else {
         def.reject("Request status is " + req.status);
       }
