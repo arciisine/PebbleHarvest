@@ -313,7 +313,7 @@ static void timer_toggle(DictionaryIterator *iter) {
   for (int i = 0; i < timers->item_count; i++) {
     MenuItem* item = timers->items[i];
     TaskTimer* timer = (TaskTimer*) item->data;
-    timer->active = (item->id == id && active); 
+    timer->active = (timer->id == id && active); 
   }
   
   timer_list_sync_state();
