@@ -1,3 +1,5 @@
+#include <pebble.h>
+
 typedef struct Sections {
   uint16_t primary;
   uint16_t alternate;
@@ -7,11 +9,13 @@ typedef struct Sections {
 typedef struct TaskTimer {
   uint16_t id;
   char* project;
+  uint32_t projectId;
   char* task;
+  uint32_t taskId;
   bool active;
   int seconds;
 } TaskTimer;
 
-#define dict_key_int(ITER, key) dict_find(ITER, key)->value->uint32
-#define dict_key_str(ITER, key) dict_find(ITER, key)->value->cstring
-#define dict_key_bool(ITER, key) dict_find(ITER, key)->value->uint8 == 1
+static int dict_key_int(DictionaryIterator*, uint16_t);
+static char* dict_key_str(DictionaryIterator*, uint16_t);
+static bool dict_key_bool(DictionaryIterator*, uint16_t);

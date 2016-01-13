@@ -22,7 +22,8 @@ ActionTimerListItemTaskName = 16,
 ActionTimerListItemEnd = 17,
 ActionTimerListEnd = 18,
 ActionTimerAdd = 19,
-ActionTimerToggle = 20 
+ActionTimerCreated = 20,
+ActionTimerToggle = 21 
 } Action;
 
 typedef enum {
@@ -55,5 +56,6 @@ const char* ActionNames[] = { "Ready",
 "TimerListItemEnd",
 "TimerListEnd",
 "TimerAdd",
+"TimerCreated",
 "TimerToggle"};
 

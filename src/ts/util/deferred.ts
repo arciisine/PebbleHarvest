@@ -1,5 +1,6 @@
 export interface Promise<T> {
   then(succ:(T)=>void, fail?:(any?)=>void):Promise<T>
+  always(fn:(any?)=>void)
 }
 
 export class Deferred<T> {
@@ -33,6 +34,9 @@ export class Deferred<T> {
           }
         }
         return prom;
+      },
+      always : (fn:(any?)=>void) => {
+        return prom.then(fn, fn);
       }
     }
     

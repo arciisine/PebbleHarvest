@@ -29,6 +29,21 @@ static int ADD_TASK_KEY = -2;
 
 static MenuItem* active_item;
 
+static int dict_key_int(DictionaryIterator* itr, uint16_t key) {
+  Tuple* t = dict_find(itr, key);
+  return t == NULL ? 0 : t->value->uint32;
+} 
+
+static char* dict_key_str(DictionaryIterator* itr, uint16_t key) {
+  Tuple* t = dict_find(itr, key);
+  return t == NULL ? NULL : t->value->cstring;
+} 
+
+static bool dict_key_bool(DictionaryIterator* itr, uint16_t key) {
+  Tuple* t = dict_find(itr, key);
+  return t == NULL ? false : t->value->uint8 == 1;
+} 
+
 static bool menu_is_empty(Menu* menu, Sections sections) {
    return menu->sections[sections.alternate]->item_count == 0 && menu->sections[sections.primary]->item_count == 0 ;
 }
@@ -115,6 +130,13 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer selected: %p, %d %s",item, item->id, item->title);
   if (longPress) {
     timer_menu_open();
+  } else if (item->id == 0) {
+    TaskTimer* timer = (TaskTimer*) item->data;
+    send_message(ActionTimerAdd, 3,
+      AppKeyTimer, timer->id, 
+      AppKeyProject, timer->projectId, 
+      AppKeyTask, timer->taskId
+    );
   } else if (item->id > 0) {
     send_message(ActionTimerToggle, 1, AppKeyTimer, item->id);
   } else if (item->id == ADD_TASK_KEY) {
@@ -178,7 +200,9 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
             
     case ActionTimerListItemStart:      
       buffered_timer = (TaskTimer*) malloc(sizeof(MenuItem));
-      buffered_timer->id = dict_key_int(iter, AppKeyTimer);      
+      buffered_timer->id = dict_key_int(iter, AppKeyTimer);
+      buffered_timer->projectId = dict_key_int(iter, AppKeyProject);
+      buffered_timer->taskId = dict_key_int(iter, AppKeyTask);
       buffered_timer->active = dict_key_bool(iter, AppKeyActive);
       buffered_timer->seconds = dict_key_int(iter, AppKeySeconds);
       break;
@@ -295,6 +319,15 @@ static void timer_toggle(DictionaryIterator *iter) {
   timer_list_sync_state();
 }
 
+static void timer_created(DictionaryIterator *iter) {
+  int id = dict_key_int(iter, AppKeyTimer);
+  MenuItem* item = menu_get_selected_item(timer_menu);
+  TaskTimer* timer = ((TaskTimer*)item->data);
+  timer->id = id;
+  timer->active = true;  
+  timer_list_sync_state();
+}
+
 static void menu_free_timer_data() {
   MenuSection* timers = timer_menu->sections[timer_sections.primary];  
   for (int i = 0; i < MAX_MENU_SIZE; i++) {
@@ -336,6 +369,10 @@ static void on_message(DictionaryIterator *iter, void *context) {
       
     case ActionTimerToggle:
       timer_toggle(iter);
+      break;
+      
+    case ActionTimerCreated:
+      timer_created(iter);
       break;
       
     case ActionProjectListStart:

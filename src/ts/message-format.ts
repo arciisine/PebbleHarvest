@@ -21,7 +21,8 @@ TimerListItemTaskName = 16,
 TimerListItemEnd = 17,
 TimerListEnd = 18,
 TimerAdd = 19,
-TimerToggle = 20
+TimerCreated = 20,
+TimerToggle = 21
 }
 
 export let ActionNames:string[] = ["Ready",
@@ -44,6 +45,7 @@ export let ActionNames:string[] = ["Ready",
 "TimerListItemEnd",
 "TimerListEnd",
 "TimerAdd",
+"TimerCreated",
 "TimerToggle"];
 
 export let AppKey = {

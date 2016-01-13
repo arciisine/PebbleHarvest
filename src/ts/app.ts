@@ -120,11 +120,18 @@ export default class App extends MessageHandler {
   
   @message(Action.TimerAdd) 
   timerAdd(data:Pebble.MessagePayload) {
-    return this.harvest.createTimer(data[AppKey.Project] as number, data['Task'] as number).then((timer:TimerModel) => {
-      this.queue.pushMap( 
-        AppKey.Action, Action.TimerListReload, 
-        AppKey.Timer, timer.id 
-      )
+    return this.harvest.createTimer(data[AppKey.Project] as number, data[AppKey.Task] as number).then((timer:TimerModel) => {
+      if (data[AppKey.Timer] !== undefined) {
+        this.queue.pushMap( 
+          AppKey.Action, Action.TimerCreated, 
+          AppKey.Timer, timer.id 
+        )
+      } else {
+        this.queue.pushMap( 
+          AppKey.Action, Action.TimerListReload, 
+          AppKey.Timer, timer.id 
+        )
+      }
     });
   }
   

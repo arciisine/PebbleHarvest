@@ -22,7 +22,7 @@ export default class BaseRest {
     
     body = body ? JSON.stringify(body) : null
     
-    console.log(`Rest call: ${method} ${url}`)
+    console.log(`Rest call: ${method} ${url} ${body || ''}`)
     
     req.send(body);
     

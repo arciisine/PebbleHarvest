@@ -1,5 +1,6 @@
 import {Deferred, Promise} from '../util/deferred';
 import memoize from '../util/memoize';
+import Utils from '../util/utils';
 
 import TimerModel from '../model/timer';
 import TaskModel from '../model/task';
@@ -10,6 +11,43 @@ import OptionService from './options';
 
 let HOUR = 3600000
 let DAY = 3600000
+
+class Accumulator {
+  all: {} = {};
+  flattened:TimerModel[] = [];
+  
+  merge(assignments:{day_entries:[any]}, previous:boolean = false):TimerModel[] {           
+    //Flatten Entries
+    assignments.day_entries.forEach(x => {
+      x.updated_at = Date.parse(x.updated_at) + (!!x.timer_started_at ? 3600 * 60 : 0);
+                
+      let key = `${x.project_id}||${x.task_id}`;
+      if (!this.all[key]) { //Create 
+        let out = new TimerModel();
+        out.active = previous ? false : !!x.timer_started_at;
+        out.projectId = x.project_id;
+        out.projectTitle = x.project;
+        out.taskId = x.task_id;
+        out.taskTitle = x.task;
+        out.id = previous ? 0 : x.id;
+        out.updated_at = x.updated_at; 
+        out.hours = previous ? 0 : x.hours;
+        this.all[key] = out;
+        this.flattened.push(out);
+      } else if (!previous) {//Merge
+        let out = this.all[key].hours;
+        out += x.hours;
+        
+        if (!out.active && x.updated_at > out.updated_at) {
+          out.id = x.id;            
+          out.active = !!x.timer_started_at;
+          out.updated_at = x.updated_at;
+        }
+      }
+    });
+    return this.flattened;
+  }    
+}
 
 export default class HarvestService extends BaseService {
   constructor(options:OptionService) {
@@ -31,43 +69,21 @@ export default class HarvestService extends BaseService {
   getTimers():Promise<TimerModel[]> {
     let def = new Deferred<TimerModel[]>();
     
-    this.get('/daily').then(assignments => {      
-      let all = {}, flattened:TimerModel[] = [];
-      
-      //Flatten Entries
-      assignments.day_entries.forEach(x => {
-        x.updated_at = Date.parse(x.updated_at) + (!!x.timer_started_at ? 3600 * 60 : 0);
-        
-        let key = `${x.project_id}||${x.task_id}`;
-        if (!all[key]) { //Create 
-          let out = new TimerModel();
-          out.active = !!x.timer_started_at;
-          out.projectId = x.project_id;
-          out.projectTitle = x.project;
-          out.taskId = x.task_id;
-          out.taskTitle = x.task;
-          out.id = x.id;
-          out.updated_at = x.updated_at; 
-          out.hours = x.hours;
-          all[key] = out;
-          flattened.push(out);
-        } else {//Merge
-          let out = all[key].hours;
-          out += x.hours;
-          
-          if (!out.active && x.updated_at > out.updated_at) {
-            out.id = x.id;            
-            out.active = !!x.timer_started_at;
-            out.updated_at = x.updated_at;
+    let dates = Utils.mostRecentBusinessDays();
+    let acc = new Accumulator()
+    let count = 0;
+
+    dates.map(x => {
+      this.get(`/daily/${Utils.dayOfYear(x)}/${x.getFullYear()}`)
+        .then(asn => { acc.merge(asn, x !== dates[0]); }, def.reject)
+        .always(() => {
+          if (++count === dates.length) {
+            def.resolve(acc.flattened.sort((a,b) => b.updated_at - a.updated_at));
           }
-        }
-      });
-      
-      flattened = flattened.sort((a,b) => b.updated_at - a.updated_at);
-      
-      def.resolve(flattened);
-    }, def.reject);
-    
+        });
+      ;  
+    });
+ 
     return def.promise();
   }
   

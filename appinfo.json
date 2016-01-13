@@ -46,6 +46,7 @@
     "TimerListEnd",
 
     "TimerAdd",
+    "TimerCreated",
     "TimerToggle"
   ],
   "resources": {
