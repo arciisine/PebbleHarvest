@@ -16,7 +16,7 @@ class Accumulator {
   all: {} = {};
   flattened:TimerModel[] = [];
   
-  merge(assignments:{day_entries:[any]}, previous:boolean = false):TimerModel[] {           
+  merge(assignments:{day_entries:[any]}, today:boolean = false):TimerModel[] {           
     //Flatten Entries
     assignments.day_entries.forEach(x => {
       x.updated_at = Date.parse(x.updated_at) + (!!x.timer_started_at ? 3600 * 60 : 0);
@@ -24,23 +24,25 @@ class Accumulator {
       let key = `${x.project_id}||${x.task_id}`;
       if (!this.all[key]) { //Create 
         let out = new TimerModel();
-        out.active = previous ? false : !!x.timer_started_at;
+        console.log("Setting active", today, x.timer_started_at);
+        out.active = !today ? false : x.timer_started_at !== undefined;
         out.projectId = parseInt(x.project_id);
         out.projectTitle = x.project;
         out.taskId = parseInt(x.task_id);
         out.taskTitle = x.task;
-        out.id = previous ? 0 : x.id;
+        out.id = !today ? 0 : x.id;
         out.updated_at = x.updated_at; 
-        out.hours = previous ? 0 : parseFloat(x.hours);
-        this.all[key] = out;
+        out.hours = !today ? 0 : parseFloat(x.hours);
+        this.all[key] = out;        
         this.flattened.push(out);
-      } else if (!previous) {//Merge
-        let out = this.all[key].hours;
-        out += parseFloat(x.hours);
+      } else if (today) {//Merge
+        let out = this.all[key];
+        out.hours += parseFloat(x.hours);
         
         if (!out.active && x.updated_at > out.updated_at) {
           out.id = x.id;            
-          out.active = !!x.timer_started_at;
+          console.log("Setting active merge", today, x.timer_started_at !== undefined);
+          out.active = x.timer_started_at !== undefined;
           out.updated_at = x.updated_at;
         }
       }
@@ -73,9 +75,9 @@ export default class HarvestService extends BaseService {
     let acc = new Accumulator()
     let count = 0;
 
-    dates.map(x => {
+    dates.map((x,i) => {
       this.get(`/daily/${Utils.dayOfYear(x)}/${x.getFullYear()}`)
-        .then(asn => { acc.merge(asn, x !== dates[0]); }, def.reject)
+        .then(asn => { acc.merge(asn, i === 0); }, def.reject)
         .always(() => {
           if (++count === dates.length) {
             def.resolve(acc.flattened.sort((a,b) => b.updated_at - a.updated_at));

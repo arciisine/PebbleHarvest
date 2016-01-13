@@ -136,8 +136,8 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
     TaskTimer* timer = (TaskTimer*) item->data;
     send_message(ActionTimerAdd, 3,
       AppKeyTimer, timer->id, 
-      AppKeyProject, timer->projectId, 
-      AppKeyTask, timer->taskId
+      AppKeyProject, timer->project_id, 
+      AppKeyTask, timer->task_id
     );
   } else if (item->id > 0) {
     send_message(ActionTimerToggle, 1, AppKeyTimer, item->id);
@@ -201,8 +201,8 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
     case ActionTimerListItemStart:      
       buffered_timer = (TaskTimer*) malloc(sizeof(MenuItem));
       buffered_timer->id = dict_key_int(iter, AppKeyTimer);
-      buffered_timer->projectId = dict_key_int(iter, AppKeyProject);
-      buffered_timer->taskId = dict_key_int(iter, AppKeyTask);
+      buffered_timer->project_id = dict_key_int(iter, AppKeyProject);
+      buffered_timer->task_id = dict_key_int(iter, AppKeyTask);
       buffered_timer->active = dict_key_bool(iter, AppKeyActive);
       buffered_timer->seconds = dict_key_int(iter, AppKeySeconds);
       break;
@@ -305,9 +305,7 @@ static void on_projectlist_build(DictionaryIterator *iter, Action action) {
   }
 }
 
-static void timer_toggle(DictionaryIterator *iter) {
-  uint32_t id = dict_key_int(iter, AppKeyTimer);
-  bool active = dict_key_bool(iter, AppKeyActive);
+static void timer_toggle_(uint32_t id, bool active) {
   MenuSection* timers = timer_menu->sections[timer_sections.primary];
   
   for (int i = 0; i < timers->item_count; i++) {
@@ -319,6 +317,12 @@ static void timer_toggle(DictionaryIterator *iter) {
   timer_list_sync_state();
 }
 
+static void timer_toggle(DictionaryIterator *iter) {
+  uint32_t id = dict_key_int(iter, AppKeyTimer);
+  bool active = dict_key_bool(iter, AppKeyActive);
+  timer_toggle_(id, active);
+}
+
 static void timer_created(DictionaryIterator *iter) {
   int id = dict_key_int(iter, AppKeyTimer);
   MenuItem* item = menu_get_selected_item(timer_menu);
@@ -326,8 +330,8 @@ static void timer_created(DictionaryIterator *iter) {
   
   TaskTimer* timer = ((TaskTimer*)item->data);
   timer->id = id;
-  timer->active = true;  
-  timer_list_sync_state();
+  
+  timer_toggle_(id, true);
 }
 
 static void menu_free_timer_data() {

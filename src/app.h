@@ -9,9 +9,9 @@ typedef struct Sections {
 typedef struct TaskTimer {
   uint32_t id;
   char* project;
-  uint32_t projectId;
+  uint32_t project_id;
   char* task;
-  uint32_t taskId;
+  uint32_t task_id;
   bool active;
   int seconds;
 } TaskTimer;
