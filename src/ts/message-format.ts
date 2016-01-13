@@ -55,5 +55,6 @@ Task : "Task",
 Timer : "Timer",
 Name : "Name",
 Active : "Active",
-Seconds : "Seconds" 
+Seconds : "Seconds",
+Assigned : "Assigned" 
 };

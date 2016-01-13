@@ -23,6 +23,8 @@ static char* PROJECT_MENU_TITLE = "Projects";
 static char* TIMER_MENU_TITLE = "Active Tasks";
 static char* TASK_MENU_TITLE = "Tasks";
 static char* OLDER_SECTION_TITLE = "Older";
+static char* RECENT_SECTION_TITLE = "Recent";
+static char* ASSIGNED_SECTION_TITLE = "Assigned";
 static char* LOADING_TEXT = "Loading ...";
 static char* EMPTY_TEXT = "No Items Found";
 static uint32_t ADD_TASK_KEY = 2;
@@ -45,7 +47,7 @@ static bool dict_key_bool(DictionaryIterator* itr, uint16_t key) {
 } 
 
 static bool menu_is_empty(Menu* menu, Sections sections) {
-   return menu->sections[sections.alternate]->item_count == 0 && menu->sections[sections.primary]->item_count == 0 ;
+   return menu->sections[sections.secondary]->item_count == 0 && menu->sections[sections.primary]->item_count == 0 ;
 }
 
 static bool send_message(Action action, int count, ...) {
@@ -246,7 +248,7 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
         .title = "Add Task",
         .id = ADD_TASK_KEY,
         .icon = plus_icon
-      }, timer_sections.alternate);
+      }, timer_sections.secondary);
       break;
       
     default: break;/** do nothing */
@@ -262,7 +264,7 @@ static void on_tasklist_build(DictionaryIterator *iter, Action action) {
       menu_add_item(task_menu, (MenuItem) {
         .title = dict_key_str(iter, AppKeyName),
         .id = dict_key_int(iter, AppKeyTask),
-      }, dict_key_bool(iter, AppKeyActive) ? task_sections.primary : task_sections.alternate);
+      }, dict_key_bool(iter, AppKeyActive) ? task_sections.primary : task_sections.secondary);
       break;
       
     case ActionTaskListEnd:
@@ -280,15 +282,19 @@ static void on_tasklist_build(DictionaryIterator *iter, Action action) {
 
 
 static void on_projectlist_build(DictionaryIterator *iter, Action action) {
+  uint16_t section = project_sections.primary;
   switch(action) {
     case ActionProjectListStart:
       break;
       
-    case ActionProjectListItem:     
+    case ActionProjectListItem:
+      if (!dict_key_bool(iter, AppKeyActive)) {
+        section = dict_key_bool(iter, AppKeyAssigned) ? project_sections.secondary : project_sections.tertiary;
+      }
       menu_add_item(project_menu, (MenuItem) {
         .title = dict_key_str(iter, AppKeyName),
         .id = dict_key_int(iter, AppKeyProject)
-      }, dict_key_bool(iter, AppKeyActive) ? project_sections.primary : project_sections.alternate);           
+      }, section);           
       break;
       
     case ActionProjectListEnd: 
@@ -437,7 +443,7 @@ static void init(void) {
   timer_sections = (Sections) {
     .status = menu_add_section(timer_menu, NULL)->id,
     .primary = menu_add_section(timer_menu, NULL)->id,
-    .alternate = menu_add_section(timer_menu, NULL)->id  
+    .secondary = menu_add_section(timer_menu, NULL)->id  
   };
   
   timer_menu->basic_render = true;
@@ -450,8 +456,9 @@ static void init(void) {
   project_menu = menu_create(PROJECT_MENU_TITLE);
   project_sections = (Sections) {
     .status = menu_add_section(project_menu, NULL)->id,
-    .primary = menu_add_section(project_menu, NULL)->id,
-    .alternate = menu_add_section(project_menu, OLDER_SECTION_TITLE)->id  
+    .primary = menu_add_section(project_menu, RECENT_SECTION_TITLE)->id,
+    .secondary = menu_add_section(project_menu, ASSIGNED_SECTION_TITLE)->id,
+    .tertiary = menu_add_section(project_menu, OLDER_SECTION_TITLE)->id  
   };
   project_menu->click = project_select_handler;
 
@@ -459,8 +466,8 @@ static void init(void) {
   task_menu = menu_create(TASK_MENU_TITLE);
   task_sections = (Sections) {
     .status = menu_add_section(task_menu, NULL)->id,
-    .primary = menu_add_section(task_menu, NULL)->id,
-    .alternate = menu_add_section(task_menu, OLDER_SECTION_TITLE)->id  
+    .primary = menu_add_section(task_menu, RECENT_SECTION_TITLE)->id,
+    .secondary = menu_add_section(task_menu, OLDER_SECTION_TITLE)->id  
   };
   
   task_menu->click = task_select_handler;

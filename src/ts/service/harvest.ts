@@ -12,6 +12,11 @@ import OptionService from './options';
 let HOUR = 3600000
 let DAY = 3600000
 
+interface Recent {
+  used:{[key:string]:{[key:string]:boolean}},
+  assigned:{[key:string]:boolean}
+}
+
 class Accumulator {
   all: {} = {};
   flattened:TimerModel[] = [];
@@ -24,7 +29,6 @@ class Accumulator {
       let key = `${x.project_id}||${x.task_id}`;
       if (!this.all[key]) { //Create 
         let out = new TimerModel();
-        console.log("Setting active", today, x.timer_started_at);
         out.active = !today ? false : x.timer_started_at !== undefined;
         out.projectId = parseInt(x.project_id);
         out.projectTitle = x.project;
@@ -41,7 +45,6 @@ class Accumulator {
         
         if (!out.active && x.updated_at > out.updated_at) {
           out.id = x.id;            
-          console.log("Setting active merge", today, x.timer_started_at !== undefined);
           out.active = x.timer_started_at !== undefined;
           out.updated_at = x.updated_at;
         }
@@ -103,25 +106,34 @@ export default class HarvestService extends BaseService {
   }
   
   @memoize(HOUR)
-  getRecentProjectTaskMap():Promise<{[key:string]:{[key:string]:boolean}}> {
-    let def = new Deferred<{[key:string]:{[key:string]:boolean}}>();
+  getRecentProjectTaskMap():Promise<Recent> {
+    let def = new Deferred<Recent>();
       
-    this.get('/daily').then(assignments => {
-      let recent:{[key:string]:{[key:string]:boolean}} = {};
-      
-      let addProjectTask = (projectid, taskid) => {
-        if (!recent[projectid]) recent[projectid] = {};
-        recent[projectid][taskid] = true;
-      }
-      
-      assignments.day_entries.forEach(x => addProjectTask(x.project_id, x.task_id));
-      
-      assignments.projects.forEach(p => {
-        p.tasks.forEach(t => addProjectTask(p.id, t.id));
-      });
-      
-      def.resolve(recent);
-    }, def.reject);
+    let dates = Utils.mostRecentBusinessDays();
+    let count = 0;
+    
+    let add = (projectid, taskid) => {
+      if (!recent.used[projectid]) recent.used[projectid] = {};
+      recent.used[projectid][taskid] = true;
+    }
+    
+    let recent:Recent = {
+      used : {},
+      assigned : {}
+    };
+    
+    dates.forEach(x => {
+      this.get(`/daily/${Utils.dayOfYear(x)}/${x.getFullYear()}`)
+        .then(asn => {                   
+          asn.day_entries.forEach(x => add(x.project_id, x.task_id));
+          asn.projects.forEach(p => recent.assigned[p.id] = true)          
+        }, def.reject)
+        .always(() => {
+          if (++count === dates.length) {
+            def.resolve(recent);
+          }
+        });      
+    });
     
     return def.promise();
   }

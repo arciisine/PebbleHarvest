@@ -33,7 +33,8 @@ AppKeyTask = 2,
 AppKeyTimer = 3,
 AppKeyName = 4,
 AppKeyActive = 5,
-AppKeySeconds = 6 
+AppKeySeconds = 6,
+AppKeyAssigned = 7 
 } AppKey;
 
 const char* ActionNames[] = { "Ready",

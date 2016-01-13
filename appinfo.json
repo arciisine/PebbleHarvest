@@ -19,7 +19,8 @@
     "Timer" : 3,
     "Name" : 4,
     "Active" : 5,
-    "Seconds" : 6
+    "Seconds" : 6,
+    "Assigned" : 7
   },
   "actionKeys" : [
     "Ready",

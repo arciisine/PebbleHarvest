@@ -38,18 +38,6 @@ export default class App extends MessageHandler {
     );
   }
   
-  streamList<T>(start: Action, item : Action, end: Action, promise:Promise<T[]>, transform:(T)=>any):Promise<T[]> {
-    this.queue.pushMap(AppKey.Action, start);
-    return promise.then((data:T[]) => {
-      (data || []).forEach(i => {
-        let msg = transform(i);
-        msg[AppKey.Action] = item;
-        this.queue.push(msg);
-      }, this.onError.bind(this));
-      this.queue.push({ Action : end });
-    });
-  }
-
   onError(e) {
     console.log("Error: ",e);
     this.queue.pushMap(AppKey.Action, Action.Error);  
@@ -57,22 +45,32 @@ export default class App extends MessageHandler {
  
   @message(Action.ProjectListFetch)
   projectList(data:Pebble.MessagePayload) {
+    this.queue.pushMap(AppKey.Action, Action.ProjectListStart);
+
     return this.harvest.getRecentProjectTaskMap().then(recent => {
       this.harvest.getProjects().then(projs => {
-        projs.map(p => Utils.buildMap( 
-          AppKey.Action, Action.ProjectListItem,
-          AppKey.Project, p.id,
-          AppKey.Active, recent[p.id] !== undefined,
-          AppKey.Name, p.name 
-        ))
-        .sort((a,b) => {
-          return a[AppKey.Active] === b[AppKey.Active] ? 
-            (a[AppKey.Name].toLowerCase().localeCompare(b[AppKey.Name].toLowerCase())) : 
-            (a[AppKey.Active]? -1 : 1);
-        })
-        .forEach(p => this.queue.push(p));
-        
-        this.queue.pushMap(AppKey.Action, Action.ProjectListStart);
+        projs
+          .map(p => {
+            p.active = recent.used[p.id] !== undefined;
+            p.assigned = recent.assigned[p.id] !== undefined;
+            return p;
+          })
+          .sort((a,b) => {          
+            return a.active !== b.active ?
+              (a.active ? -1 : 1) : 
+              (a.assigned !== b.assigned ?
+                  (a.assigned ? -1 : 1) :
+                  (a.name.toLowerCase().localeCompare(b.name.toLowerCase())));
+          })
+          .map(p => Utils.buildMap( 
+            AppKey.Action, Action.ProjectListItem,
+            AppKey.Project, p.id,
+            AppKey.Active, p.active,
+            AppKey.Assigned, p.assigned,
+            AppKey.Name, p.name 
+          ))
+          .forEach(p => this.queue.push(p));        
+          
         this.queue.pushMap(AppKey.Action, Action.ProjectListEnd); 
       });
     });
@@ -82,7 +80,12 @@ export default class App extends MessageHandler {
   timerList(data:Pebble.MessagePayload) {
     return this.harvest.getTimers().then(items => {
       this.queue.pushMap(AppKey.Action, Action.TimerListStart);      
-      items.forEach(t => {
+      items.sort((a,b) => {
+        return a.active !== b.active ?
+          (a.active ? -1 : 1) : 
+          (a.taskTitle.toLowerCase().localeCompare(b.taskTitle.toLowerCase()));
+      })
+      .forEach(t => {
         this.queue.pushMap(
           AppKey.Action, Action.TimerListItemStart,
           AppKey.Timer, t.id,
@@ -107,14 +110,30 @@ export default class App extends MessageHandler {
   
   @message(Action.TaskListFetch) 
   projectTasks(data:Pebble.MessagePayload) {
+    this.queue.pushMap(AppKey.Action, Action.TaskListStart);
+
     return this.harvest.getRecentProjectTaskMap().then((recent) => {
-      this.streamList(Action.TaskListStart, Action.TaskListItem, Action.TaskListEnd, 
-        this.harvest.getProjectTasks(data[AppKey.Project] as number), 
-        (t:TaskModel) => Utils.buildMap(
-          AppKey.Task,  t.id, 
-          AppKey.Active, (recent[data[AppKey.Project] as number] || {})[t.id] !== undefined,
-          AppKey.Name, t.name 
-        ));
+      this.harvest.getProjectTasks(data[AppKey.Project] as number)
+        .then(tasks => {
+          tasks
+            .map(t => {
+              t.active = !!(recent.used[data[AppKey.Project] as number] || {})[t.id]
+              return t;
+            })
+            .sort((a,b) => {
+              return a.active !== b.active ?
+                (a.active ? -1 : 1) : 
+                (a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+            })
+            .forEach((t:TaskModel) => this.queue.pushMap(
+              AppKey.Action, Action.TaskListItem,
+              AppKey.Task,  t.id, 
+              AppKey.Active, t.active,
+              AppKey.Name, t.name 
+            ));
+            
+            this.queue.pushMap(AppKey.Action, Action.TaskListEnd);
+        }, this.onError)
     });
   }
   
