@@ -28,17 +28,16 @@ window.config = (function() {
         return val;
       },
       setRedirectLocation : function() {
-        document.querySelector('form input[name="redirect_uri"]').value = ('' + window.location);  
+        document.querySelector('form input[name="redirect_uri"]').value = ('' + window.location).split('#')[0].split('&code')[0];  
       },
       deauthorize : function() {
         config.optionsToForm({
-          'oauth.expires_in' : null,
-          'oauth.access_token' : null
+          'oauth.code' : null
         });
         config.updateDisplay();
       },
       updateDisplay : function() {
-        var authorized = (!!document.querySelector('form[name="oauth"] input[name="access_token"]').value) ? 'authorized' : 'unauthorized';
+        var authorized = (!!document.querySelector('form[name="oauth"] input[name="code"]').value) ? 'authorized' : 'unauthorized';
         ['unauthorized', 'authorized'].forEach(function(k) {
           var items = document.querySelectorAll('.'+k);
           for (var i = 0; i < items.length;i++) {

@@ -13,16 +13,25 @@
     <script>
       window.onload = function() {
         config.optionsToForm(config.readOptions());
-                                  
-        var hash = config.queryParams(window.location.hash);
-        if (hash.access_token) {
-          hash = config.queryParams(window.location.hash, 'oauth');
+        var hashStr = decodeURIComponent(''+window.location.hash) || '';
+        var hash = null;
+        
+        if (hashStr.charAt(1) === '{') {
+          hash = JSON.parse(hashStr.substring(1));
+        } else {                       
+          hash = config.queryParams(hashStr);
         }
+        
+        if (hash.code) {
+          hash = config.queryParams(hashStr, 'oauth');
+        }
+        
         if (hash) {
           config.optionsToForm(hash);
+          console.log(hash);
           window.location.hash = '';
         }
-        config.setRedirectLocation();
+        
         config.updateDisplay();
       }
       window.onbeforeunload = function() {
@@ -30,6 +39,7 @@
       }         
     </script>
   </head>
+  
   <body>
     <div class="item-container">
       <div class="button-container">
@@ -41,31 +51,24 @@
       <div class="item-container-header">Authentication Status</div>
       <div class="item-container-content">
         <div class="item">
-          Token
+          Code
           <div class="item-input-wrapper">
-            <input type="text" class="item-input" readonly name="access_token" placeholder="None">
+            <input type="text" class="item-input" readonly name="code" placeholder="None">
           </div>
         </div>
-        <div class="item">
-          Expires In
-          <div class="item-input-wrapper">
-            <input type="text" class="item-input" readonly name="expires_in"  placeholder="None">
-          </div>
-        </div>
-        <input type="hidden"  name="state" >
-        <input type="hidden" name="token_type" >
       </div>
     </form>
 
-    <form name="token" method="GET" action="https://api.harvestapp.com/oauth2/authorize">
-      <input type="hidden" name="client_id" value="0omtLZyFXpILa-e04-kQIA">
+    <form name="harvest" method="GET" action="https://api.harvestapp.com/oauth2/authorize">
+      <input type="hidden" name="client_id">
+      <input type="hidden" name="client_secret" disabled>
       <input type="hidden" name="state" value="optional-csrf-token">
-      <input type="hidden" name="response_type" value="token">
+      <input type="hidden" name="response_type" value="code">
       <input type="hidden" name="redirect_uri">
       
       <div class="item-container unauthorized">
         <div class="button-container">
-          <button type="submit" class="item-button">Authorize</button>
+          <button type="submit" class="item-button" onclick="config.setRedirectLocation();">Authorize</button>
         </div>
       </div>      
     </form>

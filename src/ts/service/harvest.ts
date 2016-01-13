@@ -62,13 +62,31 @@ export default class HarvestService extends BaseService {
   
   options:OptionService;  
   
-  exec(method:string, path:string, body?:any):Promise<any> {
+  json(method:string, path:string, body?:any):Promise<any> {
     let url = `https://api.harvestapp.com${path}?access_token=${this.options.get('oauth.access_token')}`;
-    return super.exec(method, url, body);
+    return super.json(method, url, body);
   }
   
   whoami():Promise<any> {
     return this.get('/account/who_am_i');
+  }
+  
+  authorize():Promise<any> {
+    let toURL = (o) => {
+      let out = [];
+      for (var k in o) {
+        out.push([`${encodeURIComponent(k)}=${encodeURIComponent(o[k])}`])
+      }
+      return out.join('&');
+    };
+    
+    return this.exec('', toURL, '', JSON.parse, 'POST', 'https://api.harvestapp.com/oauth2/token', {
+      code : this.options.get("oauth.code"),
+      client_id : this.options.get("harvest.client_id"),
+      client_secret : this.options.get("harvest.client_secret"),
+      redirect_uri : this.options.get("harvest.redirect_uri"),
+      grant_type : "authorization_code"
+    });
   }
   
   getTimers():Promise<TimerModel[]> {

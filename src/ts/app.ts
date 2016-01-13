@@ -23,19 +23,38 @@ export default class App extends MessageHandler {
     super(AppKey.Action, (i) => ActionNames[i]);
 
     this.queue = new MessageQueue();
-    this.options = new OptionService('https://rawgit.com/timothysoehnlin/PebbleHarvest/master/config/index.html');
-    this.options.onUpdate = () => this.verifyAuth();
+    this.options = new OptionService('http://harvest.arcsine.org');
+    
+    this.options.set("harvest.client_id", "0omtLZyFXpILa-e04-kQIA");
+    this.options.set("harvest.client_secret", "ee1T4ckZQyK0SD7s7yvsXWS4ngj5K7PPfedarS619zHu1pq-ffkEyzUepVdsyGp_79X5ciqVpmFZ9zbDyqUxOw");
+    
+    this.options.onUpdate = () => this.authenticate();
     
     this.harvest = new HarvestService(this.options);
         
-    Pebble.addEventListener('ready', () => { this.verifyAuth(); });
+    Pebble.addEventListener('ready', () => { this.authenticate(); });
   }
   
-  verifyAuth():void {
+  authenticate():void {
     this.harvest.whoami().then(
       () => this.queue.pushMap(AppKey.Action, Action.Ready),
-      () => this.queue.pushMap(AppKey.Action, Action.Unauthenticated)
-    );
+      () => {
+        this.harvest.authorize().then(
+          (data) => {
+            console.log(`Recieved Data: ${JSON.stringify(data)}`)
+            this.options.set('oauth.access_token', data.access_token)
+            this.options.set('oauth.refresh_token', data.access_token),
+            this.options.set('oauth.expires_in', data.expires_in)
+            this.queue.pushMap(AppKey.Action, Action.Ready)
+          }, 
+          (data) => {
+            console.log(`Recieved Data: ${JSON.stringify(data)}`)
+            this.queue.pushMap(AppKey.Action, Action.Unauthenticated)
+          }
+        );    
+      }
+    )
+    
   }
   
   onError(e) {
