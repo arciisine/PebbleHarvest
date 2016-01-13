@@ -11,6 +11,8 @@
 
 #define SCROLL_MENU_ITEM_WAIT_TIMER 1000
 #define SCROLL_MENU_ITEM_TIMER 125
+#define SCROLL_MENU_SHIFT 5
+#define SCROLL_MENU_LIGHT_REFRESH 2000
 
 static void menu_scroll_callback(void* data) {
   Menu* menu = (Menu*)data;
@@ -24,7 +26,10 @@ static void menu_scroll_callback(void* data) {
     menu->scroll_timer = NULL;  
     return;
   } else {  
-    item->scroll_offset+=5;
+    item->scroll_offset += SCROLL_MENU_SHIFT;
+    if (item->scroll_offset % (SCROLL_MENU_SHIFT * (SCROLL_MENU_LIGHT_REFRESH / SCROLL_MENU_ITEM_TIMER)) == 0) {
+      light_enable_interaction();
+    }
   }
   
   
