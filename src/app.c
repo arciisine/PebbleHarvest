@@ -47,7 +47,10 @@ static bool dict_key_bool(DictionaryIterator* itr, uint16_t key) {
 } 
 
 static bool menu_is_empty(Menu* menu, Sections sections) {
-   return menu->sections[sections.secondary]->item_count == 0 && menu->sections[sections.primary]->item_count == 0 ;
+   return  
+    (menu->sections[sections.primary]   == NULL || menu->sections[sections.primary]->item_count   == 0) && 
+    (menu->sections[sections.secondary] == NULL || menu->sections[sections.secondary]->item_count == 0) && 
+    (menu->sections[sections.tertiary]  == NULL || menu->sections[sections.tertiary]->item_count  == 0) ;
 }
 
 static bool send_message(Action action, int count, ...) {
