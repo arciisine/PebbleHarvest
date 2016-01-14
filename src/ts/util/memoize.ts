@@ -1,4 +1,5 @@
 import {Deferred} from './deferred';
+import Utils from './utils'
 
 //Memoize
 export default (function() {
@@ -29,7 +30,7 @@ export default (function() {
         
         return fn.apply(this, args)
           .then(data => {
-            console.log("Caching", key, data);
+            Utils.log("Caching", key, data);
             cache[key] = data;
             cacheProperties[key] = {
               age : new Date().getTime()

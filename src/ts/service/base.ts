@@ -1,4 +1,5 @@
 import {Deferred, Promise} from '../util/deferred';
+import Utils from '../util/utils'
 
 export default class BaseRest {
   
@@ -22,6 +23,7 @@ export default class BaseRest {
         let res = resHandler(req.response);
         def.resolve(res);
       } else {
+        Utils.log(req.status);
         def.reject("Request status is " + req.status);
       }
     }
@@ -29,7 +31,7 @@ export default class BaseRest {
     
     body = body ? reqHandler(body) : null
     
-    console.log(`curl -X ${method} '${url}' ${body ? `-d '${body}'` : ''}`)
+    Utils.log(`curl -X ${method} '${url}' ${body ? `-d '${body}'` : ''}`)
     
     req.send(body);
     

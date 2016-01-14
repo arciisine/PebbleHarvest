@@ -51,7 +51,7 @@ export default class App extends MessageHandler {
   }
   
   onError(e) {
-    console.log("Error: ",e);
+    Utils.log("Error: ",e);
     this.queue.pushMap(AppKey.Action, Action.Error);  
   }
  

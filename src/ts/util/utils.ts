@@ -26,4 +26,7 @@ export default class Utils  {
     }
     return out;
   }
+  static log(...all):void {
+    console.log(all.map(x => `${x}`).join(' '))
+  }
 }

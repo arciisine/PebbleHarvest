@@ -81,7 +81,7 @@ export default class HarvestService extends BaseService {
   }
   
   onTokenResponse(data):any {
-    console.log(`Received Token: ${JSON.stringify(data)}`)
+    Utils.log(`Received Token: ${JSON.stringify(data)}`)
     this.options.set('oauth.access_token', data.access_token)
     this.options.set('oauth.refresh_token', data.refresh_token),
     this.options.set('oauth.expires_in', data.expires_in)
@@ -97,7 +97,7 @@ export default class HarvestService extends BaseService {
       grant_type : "authorization_code"
     })
       .then((data) => this.onTokenResponse(data), (e) => {
-        console.log(`Failure: ${e}`)
+        Utils.log(`Failure: ${e}`)
       });
   }
   

@@ -1,3 +1,5 @@
+import Utils from '../util/utils'
+
 export function message(key:number|string) {
   return (target: Object, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) => {
     descriptor.value.onMessage = key;
@@ -32,7 +34,7 @@ export default class MessageHandler {
     let data = e.payload;
     let key:string|number = this.translateKey(data[this.actionProperty]);
     
-    console.log(`Received: ${key}: ${JSON.stringify(data)}`);
+    Utils.log(`Received: ${key}: ${JSON.stringify(data)}`);
     
     if (this._handlers[key]) {
       let ret = this._handlers[key].call(this, data);
@@ -60,7 +62,7 @@ export default class MessageHandler {
 
   register(key:number|string, fn?:Pebble.Handler) {
     key = this.translateKey(key);
-    console.log("Registering handler", key);
+    Utils.log("Registering handler", key);
     this._handlers[key] = fn;
   }
 }
