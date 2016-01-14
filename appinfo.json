@@ -20,7 +20,9 @@
     "Name" : 4,
     "Active" : 5,
     "Seconds" : 6,
-    "Assigned" : 7
+    "Assigned" : 7,
+    "SubName" : 8,
+    "Done" : 9
   },
   "actionKeys" : [
     "Ready",
@@ -28,23 +30,14 @@
     "Unauthenticated",
     
     "ProjectListFetch",
-    "ProjectListStart",
     "ProjectListItem",
-    "ProjectListEnd",
   
     "TaskListFetch",
-    "TaskListStart",
     "TaskListItem",
-    "TaskListEnd",
   
     "TimerListReload",
     "TimerListFetch",
-    "TimerListStart",
-    "TimerListItemStart",
-    "TimerListItemProjectName",
-    "TimerListItemTaskName",
-    "TimerListItemEnd",    
-    "TimerListEnd",
+    "TimerListItem",    
 
     "TimerAdd",
     "TimerCreated",

@@ -77,7 +77,8 @@ static bool send_message(Action action, int count, ...) {
   return true;
 }
 
-static void menu_set_status(Menu* menu, uint16_t section_id, char* status) {
+static void menu_set_status(Menu* menu, Sections sections, char* status) {
+  uint16_t section_id = sections.status;
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Setting Status: %s", status);
   free_and_clear(menu->sections[section_id]->title);
   menu->sections[section_id]->title = strdup(status);
@@ -89,7 +90,7 @@ static void timer_menu_open() {
   menu_empty(timer_menu);
   window_stack_pop_all(false);
   menu_open(timer_menu);
-  menu_set_status(timer_menu, timer_sections.status, LOADING_TEXT);
+  menu_set_status(timer_menu, timer_sections, LOADING_TEXT);
   send_message(ActionTimerListFetch, 0);  
 }
 
@@ -102,7 +103,7 @@ static void message_show(char* text) {
 static void project_menu_open() {
   if (menu_is_empty(project_menu, project_sections)) {
     send_message(ActionProjectListFetch, 0);
-    menu_set_status(project_menu, project_sections.status, LOADING_TEXT);  
+    menu_set_status(project_menu, project_sections, LOADING_TEXT);  
   }
   menu_open(project_menu);
 }
@@ -112,7 +113,7 @@ static void project_select_handler(MenuItem* item, bool longPress) {
   
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Project selected: %p, %d %s",item, (int) item->id, item->title);
   menu_empty(task_menu);
-  menu_set_status(task_menu, task_sections.status, LOADING_TEXT);  
+  menu_set_status(task_menu, task_sections, LOADING_TEXT);  
   send_message(ActionTaskListFetch, 1, AppKeyProject, item->id);
   menu_open(task_menu);
 }
@@ -194,121 +195,84 @@ static void timer_list_sync_state() {
 }
 
 static void on_timerlist_build(DictionaryIterator *iter, Action action) {
-  static TaskTimer* buffered_timer;
+  TaskTimer* buffered_timer;
+  buffered_timer = (TaskTimer*) malloc(sizeof(MenuItem));
+  buffered_timer->id = dict_key_int(iter, AppKeyTimer);
+  buffered_timer->project_id = dict_key_int(iter, AppKeyProject);
+  buffered_timer->task_id = dict_key_int(iter, AppKeyTask);
+  buffered_timer->active = dict_key_bool(iter, AppKeyActive);
+  buffered_timer->seconds = dict_key_int(iter, AppKeySeconds);
+  buffered_timer->project = strdup(dict_key_str(iter, AppKeyName));
+  buffered_timer->task = strdup(dict_key_str(iter, AppKeySubName));
   
-  switch(action) {
-    case ActionTimerListStart:
-      break;
-            
-    case ActionTimerListItemStart:      
-      buffered_timer = (TaskTimer*) malloc(sizeof(MenuItem));
-      buffered_timer->id = dict_key_int(iter, AppKeyTimer);
-      buffered_timer->project_id = dict_key_int(iter, AppKeyProject);
-      buffered_timer->task_id = dict_key_int(iter, AppKeyTask);
-      buffered_timer->active = dict_key_bool(iter, AppKeyActive);
-      buffered_timer->seconds = dict_key_int(iter, AppKeySeconds);
-      break;
+  menu_add_item(timer_menu, (MenuItem) {
+    .id = buffered_timer->id,
+    .title = buffered_timer->project,
+    .subtitle = buffered_timer->task,
+    .icon = buffered_timer->active ? checkmark_active : checkmark_inactive,
+    .data = buffered_timer 
+  }, timer_sections.primary);
       
-    case ActionTimerListItemProjectName:
-      buffered_timer->project = strdup(dict_key_str(iter, AppKeyName));
-      break;
+  //Don't deallocate, system will manage .data values in menu_free_timer_data
+  buffered_timer = NULL;
       
-    case ActionTimerListItemTaskName:
-      buffered_timer->task = strdup(dict_key_str(iter, AppKeyName));
-      break;
-      
-    case ActionTimerListItemEnd:
-      menu_add_item(timer_menu, (MenuItem) {
-        .id = buffered_timer->id,
-        .title = buffered_timer->project,
-        .subtitle = buffered_timer->task,
-        .icon = buffered_timer->active ? checkmark_active : checkmark_inactive,
-        .data = buffered_timer 
-      }, timer_sections.primary);
-      
-      //Don't deallocate, system will manage .data values in menu_free_timer_data
-      buffered_timer = NULL;
-      
-      //If first item
-      if (timer_menu->sections[timer_sections.primary]->item_count  == 1) {
-        menu_layer_set_selected_index(timer_menu->layer, (MenuIndex){timer_sections.primary,0}, MenuRowAlignTop, false);
-      }
-      
-      break;
-      
-    case ActionTimerListEnd:
-      if (menu_is_empty(timer_menu, timer_sections)){
-        menu_set_status(timer_menu, timer_sections.status, EMPTY_TEXT);
-      } else {
-        menu_set_status(timer_menu, timer_sections.status, NULL); //Remove loading
-      }
-      
-      timer_list_sync_state();
-      
-      menu_add_item(timer_menu, (MenuItem) {
-        .title = "Add Task",
-        .id = ADD_TASK_KEY,
-        .icon = plus_icon
-      }, timer_sections.secondary);
-      break;
-      
-    default: break;/** do nothing */
+  //If first item
+  if (timer_menu->sections[timer_sections.primary]->item_count  == 1) {
+    menu_layer_set_selected_index(timer_menu->layer, (MenuIndex){timer_sections.primary,0}, MenuRowAlignTop, false);
+  }
+  
+  if (dict_key_bool(iter, AppKeyDone)) {
+    if (menu_is_empty(timer_menu, timer_sections)){
+      menu_set_status(timer_menu, timer_sections, EMPTY_TEXT);
+    } else {
+      menu_set_status(timer_menu, timer_sections, NULL); //Remove loading
+    }
+    
+    timer_list_sync_state();
+    
+    menu_add_item(timer_menu, (MenuItem) {
+      .title = "Add Task",
+      .id = ADD_TASK_KEY,
+      .icon = plus_icon
+    }, timer_sections.secondary);
   }
 }
 
 static void on_tasklist_build(DictionaryIterator *iter, Action action) {
-  switch(action) {
-    case ActionTaskListStart:
-      break;
-      
-    case ActionTaskListItem:
-      menu_add_item(task_menu, (MenuItem) {
-        .title = dict_key_str(iter, AppKeyName),
-        .id = dict_key_int(iter, AppKeyTask),
-      }, dict_key_bool(iter, AppKeyActive) ? task_sections.primary : task_sections.secondary);
-      break;
-      
-    case ActionTaskListEnd:
-      if (menu_is_empty(task_menu, task_sections)){
-        menu_set_status(task_menu, task_sections.status, EMPTY_TEXT);
-      } else {
-        menu_set_status(task_menu, task_sections.status, NULL); //Remove loading
-        menu_force_selection_change_on_current(task_menu);       
-      }
-      break;
-      
-    default: break;/** do nothing */
+  menu_add_item(task_menu, (MenuItem) {
+    .title = dict_key_str(iter, AppKeyName),
+    .id = dict_key_int(iter, AppKeyTask),
+  }, dict_key_bool(iter, AppKeyActive) ? task_sections.primary : task_sections.secondary);
+  
+  if (dict_key_bool(iter, AppKeyDone)) {
+    if (menu_is_empty(task_menu, task_sections)){
+      menu_set_status(task_menu, task_sections, EMPTY_TEXT);
+    } else {
+      menu_set_status(task_menu, task_sections, NULL); //Remove loading
+      menu_force_selection_change_on_current(task_menu);       
+    }
   }    
 }
 
 
 static void on_projectlist_build(DictionaryIterator *iter, Action action) {
   uint16_t section = project_sections.primary;
-  switch(action) {
-    case ActionProjectListStart:
-      break;
-      
-    case ActionProjectListItem:
-      if (!dict_key_bool(iter, AppKeyActive)) {
-        section = dict_key_bool(iter, AppKeyAssigned) ? project_sections.secondary : project_sections.tertiary;
-      }
-      menu_add_item(project_menu, (MenuItem) {
-        .title = dict_key_str(iter, AppKeyName),
-        .id = dict_key_int(iter, AppKeyProject)
-      }, section);           
-      break;
-      
-    case ActionProjectListEnd: 
-      if (menu_is_empty(project_menu, project_sections)){
-         menu_set_status(project_menu, project_sections.status, EMPTY_TEXT);
-      } else {
-         menu_set_status(project_menu, project_sections.status, NULL); //Remove loading
-         menu_force_selection_change_on_current(project_menu);
-      }
-
-      break;
-      
-    default: break;/** do nothing */
+  
+  if (!dict_key_bool(iter, AppKeyActive)) {
+    section = dict_key_bool(iter, AppKeyAssigned) ? project_sections.secondary : project_sections.tertiary;
+  }
+  menu_add_item(project_menu, (MenuItem) {
+    .title = dict_key_str(iter, AppKeyName),
+    .id = dict_key_int(iter, AppKeyProject)
+  }, section);
+  
+  if (dict_key_bool(iter, AppKeyDone)) {
+    if (menu_is_empty(project_menu, project_sections)){
+        menu_set_status(project_menu, project_sections, EMPTY_TEXT);
+    } else {
+        menu_set_status(project_menu, project_sections, NULL); //Remove loading
+        menu_force_selection_change_on_current(project_menu);
+    }
   }
 }
 
@@ -372,45 +336,17 @@ static void on_message(DictionaryIterator *iter, void *context) {
       timer_menu_open();
       break;
     
-    case ActionUnauthenticated:
-      message_show("Please login first via the Settings Menu");
-      break;
-
-    case ActionTimerListReload:
-      timer_menu_open();
-      break;
-      
-    case ActionTimerToggle:
-      timer_toggle(iter);
-      break;
-      
-    case ActionTimerCreated:
-      timer_created(iter);
-      break;
-      
-    case ActionProjectListStart:
-    case ActionProjectListItem:
-    case ActionProjectListEnd: 
-      return on_projectlist_build(iter, action);
-      
-    case ActionTaskListStart:
-    case ActionTaskListItem:
-    case ActionTaskListEnd: 
-      return on_tasklist_build(iter, action);      
-      
-    case ActionTimerListStart:      
-    case ActionTimerListItemStart:      
-    case ActionTimerListItemProjectName:
-    case ActionTimerListItemTaskName:
-    case ActionTimerListItemEnd:
-    case ActionTimerListEnd:
-      return on_timerlist_build(iter, action);
-      
+    case ActionUnauthenticated: return message_show("Please login first via the Settings Menu");
+    case ActionTimerListReload: return timer_menu_open();
+    case ActionTimerToggle:     return timer_toggle(iter);      
+    case ActionTimerCreated:    return timer_created(iter);
+    case ActionProjectListItem: return on_projectlist_build(iter, action);
+    case ActionTaskListItem:    return on_tasklist_build(iter, action);            
+    case ActionTimerListItem:   return on_timerlist_build(iter, action);      
     default:
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s UNKNOWN", actionName);
   }
 }
-
 
 static void main_menu_load(Window *window) {}
 static void main_menu_unload(Window *window) {
@@ -483,7 +419,7 @@ static void init(void) {
   app_message_register_inbox_received(on_message);
   
   // Init buffers
-  app_message_open(120, 120);
+  app_message_open(512, 512);
 }
 
 static void deinit(void) {

@@ -57,17 +57,17 @@ export default class App extends MessageHandler {
  
   @message(Action.ProjectListFetch)
   projectList(data:Pebble.MessagePayload) {
-    this.queue.pushMap(AppKey.Action, Action.ProjectListStart);
-
     return this.harvest.getRecentProjectTaskMap().then(recent => {
       this.harvest.getProjects().then(projs => {
-        projs
+        projs = projs
           .map(p => {
             p.active = recent.used[p.id] !== undefined;
             p.assigned = recent.assigned[p.id] !== undefined;
             return p;
           })
           .filter(p => p.assigned || p.active)
+          
+        projs
           .sort((a,b) => {          
             return a.active !== b.active ?
               (a.active ? -1 : 1) : 
@@ -82,9 +82,13 @@ export default class App extends MessageHandler {
             AppKey.Assigned, p.assigned,
             AppKey.Name, p.name 
           ))
-          .forEach(p => this.queue.push(p));        
-          
-        this.queue.pushMap(AppKey.Action, Action.ProjectListEnd); 
+          .forEach((p,i) => {
+            console.log(i, projs.length - 1)
+            if (i == projs.length - 1) {
+               p[AppKey.Done] = true;
+            }
+            this.queue.push(p);
+          });
       });
     });
   }
@@ -92,39 +96,32 @@ export default class App extends MessageHandler {
   @message(Action.TimerListFetch)
   timerList(data:Pebble.MessagePayload) {
     return this.harvest.getTimers().then(items => {
-      this.queue.pushMap(AppKey.Action, Action.TimerListStart);      
       items.sort((a,b) => {
         return a.active !== b.active ?
           (a.active ? -1 : 1) : 
           (a.taskTitle.toLowerCase().localeCompare(b.taskTitle.toLowerCase()));
       })
-      .forEach(t => {
-        this.queue.pushMap(
-          AppKey.Action, Action.TimerListItemStart,
+      .map(t => Utils.buildMap( 
+          AppKey.Action, Action.TimerListItem,
           AppKey.Timer, t.id,
           AppKey.Project, t.projectId,
           AppKey.Task, t.taskId,
           AppKey.Active, t.active,
-          AppKey.Seconds, parseInt(''+(t.hours * 60 * 60)) 
-        );
-        this.queue.pushMap(
-          AppKey.Action, Action.TimerListItemProjectName,
-          AppKey.Name, t.projectTitle
-        );
-        this.queue.pushMap(
-          AppKey.Action, Action.TimerListItemTaskName,
-          AppKey.Name, t.taskTitle
-        );
-        this.queue.pushMap(AppKey.Action, Action.TimerListItemEnd);
+          AppKey.Seconds, parseInt(''+(t.hours * 60 * 60)), 
+          AppKey.Name, t.projectTitle,
+          AppKey.SubName, t.taskTitle
+      ))
+      .forEach((t,i) => {
+        if (i == items.length - 1) {
+          t[AppKey.Done] = true;
+        }
+        this.queue.push(t);
       });
-      this.queue.pushMap(AppKey.Action, Action.TimerListEnd);
     });
   }
   
   @message(Action.TaskListFetch) 
   projectTasks(data:Pebble.MessagePayload) {
-    this.queue.pushMap(AppKey.Action, Action.TaskListStart);
-
     return this.harvest.getRecentProjectTaskMap().then((recent) => {
       this.harvest.getProjectTasks(data[AppKey.Project] as number)
         .then(tasks => {
@@ -138,14 +135,20 @@ export default class App extends MessageHandler {
                 (a.active ? -1 : 1) : 
                 (a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
             })
-            .forEach((t:TaskModel) => this.queue.pushMap(
-              AppKey.Action, Action.TaskListItem,
-              AppKey.Task,  t.id, 
-              AppKey.Active, t.active,
-              AppKey.Name, t.name 
-            ));
-            
-            this.queue.pushMap(AppKey.Action, Action.TaskListEnd);
+            .map((t:TaskModel) => 
+              Utils.buildMap(
+                AppKey.Action, Action.TaskListItem,
+                AppKey.Task,  t.id, 
+                AppKey.Active, t.active,
+                AppKey.Name, t.name
+              )
+            )
+            .forEach((t, i) => {
+              if (i == tasks.length - 1) {
+                 t[AppKey.Done] = true;
+              }              
+              this.queue.push(t);
+            });
         }, this.onError)
     });
   }
