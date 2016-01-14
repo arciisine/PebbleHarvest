@@ -54,6 +54,14 @@ class Accumulator {
   }    
 }
 
+let toURL = (o) => {
+  let out = [];
+  for (var k in o) {
+    out.push([`${encodeURIComponent(k)}=${encodeURIComponent(o[k])}`])
+  }
+  return out.join('&');
+};
+
 export default class HarvestService extends BaseService {
   constructor(options:OptionService) {
     super();
@@ -61,9 +69,10 @@ export default class HarvestService extends BaseService {
   }
   
   options:OptionService;  
+  baseUrl:string = 'https://api.harvestapp.com';
   
   json(method:string, path:string, body?:any):Promise<any> {
-    let url = `https://api.harvestapp.com${path}?access_token=${this.options.get('oauth.access_token')}`;
+    let url = `${this.baseUrl}${path}?access_token=${this.options.get('oauth.access_token')}`;
     return super.json(method, url, body);
   }
   
@@ -71,28 +80,53 @@ export default class HarvestService extends BaseService {
     return this.get('/account/who_am_i');
   }
   
-  authorize():Promise<any> {
-    let toURL = (o) => {
-      let out = [];
-      for (var k in o) {
-        out.push([`${encodeURIComponent(k)}=${encodeURIComponent(o[k])}`])
-      }
-      return out.join('&');
-    };
-    
-    return this.exec('', toURL, '', JSON.parse, 'POST', 'https://api.harvestapp.com/oauth2/token', {
+  onTokenResponse(data):any {
+    this.options.set('oauth.access_token', data.access_token)
+    this.options.set('oauth.refresh_token', data.refresh_token),
+    this.options.set('oauth.expires_in', data.expires_in)
+    this.options.save();
+  }
+  
+  validateCode():Promise<any> {
+    return this.exec('', toURL, '', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
       code : this.options.get("oauth.code"),
       client_id : this.options.get("harvest.client_id"),
       client_secret : this.options.get("harvest.client_secret"),
       redirect_uri : this.options.get("harvest.redirect_uri"),
       grant_type : "authorization_code"
-    });
+    })
+      .then((data) => this.onTokenResponse(data));
+  }
+  
+  refreshToken():Promise<any> {
+    return this.exec('', toURL, '', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
+      refresh_token : this.options.get("oauth.refresh_token"),
+      client_id : this.options.get("harvest.client_id"),
+      client_secret : this.options.get("harvest.client_secret")
+    })
+      .then((data) => this.onTokenResponse(data));    
+  }
+  
+  authorize():Promise<any> {
+    let def = new Deferred();
+    if (!this.options.get("oauth.code")) {
+      def.reject("Not logged in");
+    } else {
+      //Try to use exsting token
+      this.whoami().then(def.resolve,
+        () => {
+          //Try to refresh token 
+          this.refreshToken().then(def.resolve, def.reject) 
+        }
+      );
+    }
+    return def.promise();
   }
   
   getTimers():Promise<TimerModel[]> {
     let def = new Deferred<TimerModel[]>();
     
-    let dates = Utils.mostRecentBusinessDays();
+    let dates = Utils.mostRecentBusinessDays(2);
     let acc = new Accumulator()
     let count = 0;
 
@@ -127,7 +161,7 @@ export default class HarvestService extends BaseService {
   getRecentProjectTaskMap():Promise<Recent> {
     let def = new Deferred<Recent>();
       
-    let dates = Utils.mostRecentBusinessDays();
+    let dates = Utils.mostRecentBusinessDays(4);
     let count = 0;
     
     let add = (projectid, taskid) => {

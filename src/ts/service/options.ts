@@ -15,15 +15,24 @@ export default class OptionService {
       this.putAll(JSON.parse(decodeURIComponent(e.response || '{}')));
       this.onUpdate();
     });
-    return this.read();
+    this.read();
+    
+    this.postInit();
+    
+    return this._data;
   }
   
   onUpdate():void {
     
   }
+  
+  postInit():void {
+    
+  }
 
   read():{} {
     this._data = JSON.parse(localStorage.getItem(this._ns + "_data") || '{}');
+    console.log(JSON.stringify(this._data));
     return this._data;
   }
 
@@ -45,7 +54,6 @@ export default class OptionService {
   }
 
   putAll(obj:{}):void {
-    this._data = {};
     for (var k in obj) {
       this._data[k] = obj[k];
     }

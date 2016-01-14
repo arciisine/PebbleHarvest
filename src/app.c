@@ -222,6 +222,7 @@ static void on_timerlist_build(DictionaryIterator *iter, Action action) {
         .id = buffered_timer->id,
         .title = buffered_timer->project,
         .subtitle = buffered_timer->task,
+        .icon = buffered_timer->active ? checkmark_active : checkmark_inactive,
         .data = buffered_timer 
       }, timer_sections.primary);
       

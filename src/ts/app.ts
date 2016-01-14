@@ -25,10 +25,15 @@ export default class App extends MessageHandler {
     this.queue = new MessageQueue();
     this.options = new OptionService('http://harvest.arcsine.org');
     
-    this.options.set("harvest.client_id", "0omtLZyFXpILa-e04-kQIA");
-    this.options.set("harvest.client_secret", "ee1T4ckZQyK0SD7s7yvsXWS4ngj5K7PPfedarS619zHu1pq-ffkEyzUepVdsyGp_79X5ciqVpmFZ9zbDyqUxOw");
+    this.options.postInit = () => {
+      this.options.set("harvest.client_id", "0omtLZyFXpILa-e04-kQIA");
+      this.options.set("harvest.client_secret", "ee1T4ckZQyK0SD7s7yvsXWS4ngj5K7PPfedarS619zHu1pq-ffkEyzUepVdsyGp_79X5ciqVpmFZ9zbDyqUxOw");
+    }
     
-    this.options.onUpdate = () => this.authenticate();
+    this.options.onUpdate = () => {
+      this.harvest.validateCode()
+        .then(() => this.authenticate());
+    }
     
     this.harvest = new HarvestService(this.options);
         
@@ -36,25 +41,10 @@ export default class App extends MessageHandler {
   }
   
   authenticate():void {
-    this.harvest.whoami().then(
+    this.harvest.authorize().then(
       () => this.queue.pushMap(AppKey.Action, Action.Ready),
-      () => {
-        this.harvest.authorize().then(
-          (data) => {
-            console.log(`Recieved Data: ${JSON.stringify(data)}`)
-            this.options.set('oauth.access_token', data.access_token)
-            this.options.set('oauth.refresh_token', data.access_token),
-            this.options.set('oauth.expires_in', data.expires_in)
-            this.queue.pushMap(AppKey.Action, Action.Ready)
-          }, 
-          (data) => {
-            console.log(`Recieved Data: ${JSON.stringify(data)}`)
-            this.queue.pushMap(AppKey.Action, Action.Unauthenticated)
-          }
-        );    
-      }
+      () => this.queue.pushMap(AppKey.Action, Action.Unauthenticated)
     )
-    
   }
   
   onError(e) {
@@ -74,6 +64,7 @@ export default class App extends MessageHandler {
             p.assigned = recent.assigned[p.id] !== undefined;
             return p;
           })
+          .filter(p => p.assigned || p.active)
           .sort((a,b) => {          
             return a.active !== b.active ?
               (a.active ? -1 : 1) : 

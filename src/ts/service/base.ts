@@ -20,7 +20,6 @@ export default class BaseRest {
     req.onload = function(e) {
       if(req.status >= 200 && req.status < 400) {
         let res = resHandler(req.response);
-        console.log(req.response);      
         def.resolve(res);
       } else {
         def.reject("Request status is " + req.status);
