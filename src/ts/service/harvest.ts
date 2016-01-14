@@ -81,6 +81,7 @@ export default class HarvestService extends BaseService {
   }
   
   onTokenResponse(data):any {
+    console.log(`Received Token: ${JSON.stringify(data)}`)
     this.options.set('oauth.access_token', data.access_token)
     this.options.set('oauth.refresh_token', data.refresh_token),
     this.options.set('oauth.expires_in', data.expires_in)
@@ -88,18 +89,20 @@ export default class HarvestService extends BaseService {
   }
   
   validateCode():Promise<any> {
-    return this.exec('', toURL, '', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
+    return this.exec('application/x-www-form-urlencoded', toURL, 'application/json', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
       code : this.options.get("oauth.code"),
       client_id : this.options.get("harvest.client_id"),
       client_secret : this.options.get("harvest.client_secret"),
       redirect_uri : this.options.get("harvest.redirect_uri"),
       grant_type : "authorization_code"
     })
-      .then((data) => this.onTokenResponse(data));
+      .then((data) => this.onTokenResponse(data), (e) => {
+        console.log(`Failure: ${e}`)
+      });
   }
   
   refreshToken():Promise<any> {
-    return this.exec('', toURL, '', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
+    return this.exec('application/x-www-form-urlencoded', toURL, 'application/json', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
       refresh_token : this.options.get("oauth.refresh_token"),
       client_id : this.options.get("harvest.client_id"),
       client_secret : this.options.get("harvest.client_secret")

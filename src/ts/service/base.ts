@@ -11,11 +11,11 @@ export default class BaseRest {
     let req = new XMLHttpRequest();
     
     req.open(method, url);
-    if (reqType) {
-      req.setRequestHeader('Accept', reqType);
+    if (resType) {
+      req.setRequestHeader('Accept', resType);
     }
-    if (body && resType) {
-      req.setRequestHeader('Content-Type', resType);
+    if (body && reqType) {
+      req.setRequestHeader('Content-Type', reqType);
     }
     req.onload = function(e) {
       if(req.status >= 200 && req.status < 400) {

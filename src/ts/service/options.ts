@@ -37,6 +37,7 @@ export default class OptionService {
   }
 
   save():void {
+    console.log(`Saving:  ${JSON.stringify(this._data)}`);
     localStorage.setItem(this._ns + "_data", JSON.stringify(this._data));
   }
 

@@ -32,7 +32,10 @@ export default class App extends MessageHandler {
     
     this.options.onUpdate = () => {
       this.harvest.validateCode()
-        .then(() => this.authenticate());
+        .then(
+          () => this.authenticate(),
+          () => this.queue.pushMap(AppKey.Action, Action.Unauthenticated)
+        );
     }
     
     this.harvest = new HarvestService(this.options);
