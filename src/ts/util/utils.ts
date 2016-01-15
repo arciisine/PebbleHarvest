@@ -29,4 +29,11 @@ export default class Utils  {
   static log(...all):void {
     console.log(all.map(x => `${x}`).join(' '))
   }
+  static toURL(o) {
+    let out = [];
+    for (var k in o) {
+      out.push([`${encodeURIComponent(k)}=${encodeURIComponent(o[k])}`])
+    }
+    return out.join('&');
+  };
 }

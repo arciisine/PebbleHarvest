@@ -9,8 +9,11 @@ import ProjectModel from '../model/project';
 import BaseService from './base';  
 import OptionService from './options';
 
-let HOUR = 3600000
-let DAY = 3600000
+let MINUTE   = 1000 * 60
+let FIVE_MIN = MINUTE * 5
+let HOUR     = MINUTE * 60
+let WORK_DAY = HOUR * 8
+let DAY      = HOUR * 24
 
 interface Recent {
   used:{[key:string]:{[key:string]:boolean}},
@@ -54,13 +57,7 @@ class Accumulator {
   }    
 }
 
-let toURL = (o) => {
-  let out = [];
-  for (var k in o) {
-    out.push([`${encodeURIComponent(k)}=${encodeURIComponent(o[k])}`])
-  }
-  return out.join('&');
-};
+
 
 export default class HarvestService extends BaseService {
   constructor(options:OptionService) {
@@ -89,7 +86,7 @@ export default class HarvestService extends BaseService {
   }
   
   validateCode():Promise<any> {
-    return this.exec('application/x-www-form-urlencoded', toURL, 'application/json', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
+    return this.exec('application/x-www-form-urlencoded', Utils.toURL, 'application/json', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
       code : this.options.get("oauth.code"),
       client_id : this.options.get("harvest.client_id"),
       client_secret : this.options.get("harvest.client_secret"),
@@ -102,7 +99,7 @@ export default class HarvestService extends BaseService {
   }
   
   refreshToken():Promise<any> {
-    return this.exec('application/x-www-form-urlencoded', toURL, 'application/json', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
+    return this.exec('application/x-www-form-urlencoded', Utils.toURL, 'application/json', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
       refresh_token : this.options.get("oauth.refresh_token"),
       client_id : this.options.get("harvest.client_id"),
       client_secret : this.options.get("harvest.client_secret")
@@ -126,6 +123,7 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }
   
+  @memoize(FIVE_MIN, "timers")
   getTimers():Promise<TimerModel[]> {
     let def = new Deferred<TimerModel[]>();
     
@@ -160,7 +158,7 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }
   
-  @memoize(HOUR)
+  @memoize(HOUR, "projects")
   getRecentProjectTaskMap():Promise<Recent> {
     let def = new Deferred<Recent>();
       
@@ -211,7 +209,7 @@ export default class HarvestService extends BaseService {
     return this.post(`/daily/timer/${entryId}`);
   }
   
-  @memoize(DAY)
+  @memoize(WORK_DAY, "projects")
   getTasks():Promise<TaskModel[]> {
     let def = new Deferred<TaskModel[]>();
     
@@ -232,12 +230,12 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }
   
-  @memoize(DAY)
+  @memoize(WORK_DAY, "projects")
   getTaskMap():Promise<{[key:string]:TaskModel}> {
     return this.listToMap(this.getTasks(), 'id');
   }
   
-  @memoize(DAY)
+  @memoize(WORK_DAY, "projects")
   getProjects():Promise<ProjectModel[]> {
     let def = new Deferred<ProjectModel[]>();
     
@@ -259,7 +257,7 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }  
   
-  @memoize(DAY)
+  @memoize(WORK_DAY, "projects")
   getProjectMap():Promise<{[key:string]:ProjectModel}> {
     this.getProjects().then(function(data:ProjectModel[]) {
       
@@ -267,7 +265,7 @@ export default class HarvestService extends BaseService {
     return this.listToMap(this.getProjects(), 'id');
   }
   
-  @memoize(HOUR)
+  @memoize(WORK_DAY, "projects")
   getProjectTasks(projectId:number):Promise<TaskModel[]> {
     let def = new Deferred<TaskModel[]>();
     
