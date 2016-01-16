@@ -29,15 +29,17 @@
     "Error",
     "Unauthenticated",
     
-    "ProjectListFetch",
-    "ProjectListItem",
+    "ProjectsRefresh",
+    "ProjectsFetch",
+    "ProjectItem",
   
-    "TaskListFetch",
-    "TaskListItem",
+    "TasksRefresh",
+    "TasksFetch",
+    "TaskItem",
   
-    "TimerListReload",
-    "TimerListFetch",
-    "TimerListItem",    
+    "TimersRefresh",
+    "TimersFetch",
+    "TimerItem",    
 
     "TimerAdd",
     "TimerCreated",

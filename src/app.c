@@ -94,7 +94,7 @@ static void timer_menu_open() {
   window_stack_pop_all(false);
   menu_open(timer_menu);
   menu_set_status(timer_menu, timer_sections, LOADING_TEXT);
-  send_message(ActionTimerListFetch, 0);  
+  send_message(ActionTimersFetch, 0);  
 }
 
 static void message_show(char* text) {
@@ -105,24 +105,39 @@ static void message_show(char* text) {
 
 static void project_menu_open() {
   if (menu_is_empty(project_menu, project_sections)) {
-    send_message(ActionProjectListFetch, 0);
+    send_message(ActionProjectsFetch, 0);
     menu_set_status(project_menu, project_sections, LOADING_TEXT);  
   }
   menu_open(project_menu);
 }
 
-static void project_select_handler(MenuItem* item, bool longPress) {
-  if (item->id == 0) return;
-  
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Project selected: %p, %d %s",item, (int) item->id, item->title);
+static void task_menu_open() {
   menu_empty(task_menu);
-  menu_set_status(task_menu, task_sections, LOADING_TEXT);  
-  send_message(ActionTaskListFetch, 1, AppKeyProject, item->id);
+  send_message(ActionTasksFetch, 1, AppKeyProject, menu_get_selected_item(project_menu)->id);
+  menu_set_status(project_menu, project_sections, LOADING_TEXT);  
   menu_open(task_menu);
 }
 
+
+static void project_select_handler(MenuItem* item, bool longPress) {
+  if (longPress) {
+    send_message(ActionProjectsRefresh, 1, AppKeyProject, 1);
+    return; 
+  } else if (item->id == 0) {
+    return;
+  }
+  
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Project selected: %p, %d %s",item, (int) item->id, item->title);
+  task_menu_open();
+}
+
 static void task_select_handler(MenuItem* item, bool longPress) {
-  if (item->id == 0) return;
+  if (longPress) {
+    send_message(ActionTasksRefresh, 1, AppKeyTask, 1);
+    return;
+  } else if (item->id == 0) {
+    return;
+  }
   
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Task selected: %p, %d %s",item, (int) item->id, item->title);
    
@@ -136,6 +151,8 @@ static void timer_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer selected: %p, %d %s",item, (int) item->id, item->title);  
   if (longPress) {
     timer_menu_open();
+    //send_message(ActionTimersRefresh, 1, AppKeyTimer, 1);
+    return;
   } else if (item->id == ADD_TASK_KEY) {
     project_menu_open();
   } else if (item->id == 0) {
@@ -340,12 +357,14 @@ static void on_message(DictionaryIterator *iter, void *context) {
       break;
     
     case ActionUnauthenticated: return message_show("Please login first via the Settings Menu");
-    case ActionTimerListReload: return timer_menu_open();
     case ActionTimerToggle:     return timer_toggle(iter);      
     case ActionTimerCreated:    return timer_created(iter);
-    case ActionProjectListItem: return on_projectlist_build(iter, action);
-    case ActionTaskListItem:    return on_tasklist_build(iter, action);            
-    case ActionTimerListItem:   return on_timerlist_build(iter, action);      
+    case ActionProjectItem:     return on_projectlist_build(iter, action);
+    case ActionTaskItem:        return on_tasklist_build(iter, action);            
+    case ActionTimerItem:       return on_timerlist_build(iter, action);      
+    case ActionTimersRefresh:    return timer_menu_open();
+    case ActionTasksRefresh:     return task_menu_open();
+    case ActionProjectsRefresh:  menu_empty(project_menu); return project_menu_open();
     default:
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Message: %s UNKNOWN", actionName);
   }

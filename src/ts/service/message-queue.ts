@@ -14,7 +14,7 @@ export default class MessageQueue {
   }
 
   _iterateFailure(e:any):void {
-    console.log(`Error ${e}`);
+    Utils.error(`Error ${e}`);
     this._iterate();
   }
 
@@ -25,7 +25,7 @@ export default class MessageQueue {
     }
     
     let out = this._queue[0];    
-    Utils.log(`Dequeued ${JSON.stringify(out)}`);
+    Utils.debug(`Dequeued ${JSON.stringify(out)}`);
     Pebble.sendAppMessage(out, this._iterateSuccess, this._iterateFailure);
   }
   
@@ -41,7 +41,7 @@ export default class MessageQueue {
         this._queue = this._queue.concat(data);
     }
     
-    Utils.log(`Queued  ${JSON.stringify(data)}`);
+    Utils.debug(`Queued  ${JSON.stringify(data)}`);
     
     if (!this._active) {
       this._active = true;

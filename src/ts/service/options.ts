@@ -34,12 +34,12 @@ export default class OptionService {
 
   read():{} {
     this._data = JSON.parse(localStorage.getItem(this._ns + "_data") || '{}');
-    Utils.log(JSON.stringify(this._data));
+    Utils.debug(JSON.stringify(this._data));
     return this._data;
   }
 
   save():void {
-    Utils.log(`Saving:  ${JSON.stringify(this._data)}`);
+    Utils.debug(`Saving:  ${JSON.stringify(this._data)}`);
     localStorage.setItem(this._ns + "_data", JSON.stringify(this._data));
   }
 

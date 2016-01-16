@@ -11,6 +11,7 @@ import TimerModel from './model/timer';
 import ProjectModel from './model/project';
 
 import Utils from './util/utils';
+import Cache from './util/cache';
 import {Action, ActionNames, AppKey} from './message-format';
 
 export default class App extends MessageHandler {
@@ -55,7 +56,7 @@ export default class App extends MessageHandler {
     this.queue.pushMap(AppKey.Action, Action.Error);  
   }
  
-  @message(Action.ProjectListFetch)
+  @message(Action.ProjectsFetch)
   projectList(data:Pebble.MessagePayload) {
     return this.harvest.getRecentProjectTaskMap().then(recent => {
       this.harvest.getProjects().then(projs => {
@@ -76,14 +77,13 @@ export default class App extends MessageHandler {
                   (a.name.toLowerCase().localeCompare(b.name.toLowerCase())));
           })
           .map(p => Utils.buildMap( 
-            AppKey.Action, Action.ProjectListItem,
+            AppKey.Action, Action.ProjectItem,
             AppKey.Project, p.id,
             AppKey.Active, p.active,
             AppKey.Assigned, p.assigned,
             AppKey.Name, p.name 
           ))
           .forEach((p,i) => {
-            console.log(i, projs.length - 1)
             if (i == projs.length - 1) {
                p[AppKey.Done] = true;
             }
@@ -93,7 +93,7 @@ export default class App extends MessageHandler {
     });
   }
   
-  @message(Action.TimerListFetch)
+  @message(Action.TimersFetch)
   timerList(data:Pebble.MessagePayload) {
     return this.harvest.getTimers().then(items => {
       items.sort((a,b) => {
@@ -102,7 +102,7 @@ export default class App extends MessageHandler {
           (a.taskTitle.toLowerCase().localeCompare(b.taskTitle.toLowerCase()));
       })
       .map(t => Utils.buildMap( 
-          AppKey.Action, Action.TimerListItem,
+          AppKey.Action, Action.TimerItem,
           AppKey.Timer, t.id,
           AppKey.Project, t.projectId,
           AppKey.Task, t.taskId,
@@ -120,7 +120,7 @@ export default class App extends MessageHandler {
     });
   }
   
-  @message(Action.TaskListFetch) 
+  @message(Action.TasksFetch) 
   projectTasks(data:Pebble.MessagePayload) {
     return this.harvest.getRecentProjectTaskMap().then((recent) => {
       this.harvest.getProjectTasks(data[AppKey.Project] as number)
@@ -137,7 +137,7 @@ export default class App extends MessageHandler {
             })
             .map((t:TaskModel) => 
               Utils.buildMap(
-                AppKey.Action, Action.TaskListItem,
+                AppKey.Action, Action.TaskItem,
                 AppKey.Task,  t.id, 
                 AppKey.Active, t.active,
                 AppKey.Name, t.name
@@ -163,7 +163,7 @@ export default class App extends MessageHandler {
         )
       } else {
         this.queue.pushMap( 
-          AppKey.Action, Action.TimerListReload, 
+          AppKey.Action, Action.TimersRefresh, 
           AppKey.Timer, timer.id 
         )
       }
@@ -179,5 +179,26 @@ export default class App extends MessageHandler {
         AppKey.Active, !timer.ended_at && !!timer.timer_started_at
       );
     });
+  }
+  
+  @message(Action.TasksRefresh)
+  refreshTaskData(data:Pebble.MessagePayload) {
+      Cache.resetNamespace('tasks');
+      this.queue.pushMap(AppKey.Action, Action.TasksRefresh);
+  }
+  
+  @message(Action.ProjectsRefresh)
+  refreshProjectData(data:Pebble.MessagePayload) {
+    Cache.resetNamespace('projects');
+    this.queue.pushMap(
+      AppKey.Action, Action.ProjectsRefresh,
+      AppKey.Project, 1
+    );
+  }
+  
+  @message(Action.TimersRefresh)
+  refreshTimerData(data:Pebble.MessagePayload) {
+    Cache.resetNamespace('timers');
+    this.queue.pushMap(AppKey.Action, Action.TimersRefresh);
   }
 }

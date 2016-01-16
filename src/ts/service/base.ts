@@ -23,7 +23,7 @@ export default class BaseRest {
         let res = resHandler(req.response);
         def.resolve(res);
       } else {
-        Utils.log(req.status);
+        Utils.debug(req.status);
         def.reject("Request status is " + req.status);
       }
     }
@@ -31,7 +31,7 @@ export default class BaseRest {
     
     body = body ? reqHandler(body) : null
     
-    Utils.log(`curl -X ${method} '${url}' ${body ? `-d '${body}'` : ''}`)
+    Utils.debug(`curl -X ${method} '${url}' ${body ? `-d '${body}'` : ''}`)
     
     req.send(body);
     

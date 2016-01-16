@@ -246,6 +246,7 @@ void menu_window_disappear(Window* window) {
   if (menu->scroll_timer != NULL) {
     menu_get_selected_item(menu)->scroll_offset = 0;
     app_timer_cancel(menu->scroll_timer);
+    menu->scroll_timer = NULL;
   }
   
   PROXY_HANDLER(menu, disappear);

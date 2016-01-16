@@ -6,5 +6,5 @@ export default class TimerModel {
   taskTitle:string;
   id:number;
   hours:number;
-  updated_at:number;
+  updatedAt:number;
 }

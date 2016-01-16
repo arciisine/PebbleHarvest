@@ -1,3 +1,5 @@
+import Utils from './utils';
+
 export interface Promise<T> {
   then(succ:(T)=>void, fail?:(any?)=>void):Promise<T>
   always(fn:(any?)=>void)
@@ -44,14 +46,13 @@ export class Deferred<T> {
   }
   
   resolve(data:T):Deferred<T> {
+    Utils.debug(`Resolving deferred: ${JSON.stringify(data)}`)
     if (this._resolved === undefined && this._rejected === undefined) {
       this._resolved = data;
     } else {
       return;
     }
-    this._success.forEach(function(fn) {
-      fn(data);
-    });
+    this._success.forEach(fn => fn(data));
     
     return this;
   }

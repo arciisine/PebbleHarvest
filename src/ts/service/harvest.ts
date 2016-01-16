@@ -24,11 +24,19 @@ class Accumulator {
   all: {} = {};
   flattened:TimerModel[] = [];
   
+  constructor(previous?:TimerModel[]) {
+    this.flattened = previous || [];
+    this.flattened.forEach(x => {
+      let key = `${x.projectId}||${x.taskId}`;
+      this.all[key] = x
+    });
+  }
+  
   merge(assignments:{day_entries:[any]}, today:boolean = false):TimerModel[] {           
     //Flatten Entries
     assignments.day_entries.forEach(x => {
-      x.updated_at = Date.parse(x.updated_at) + (!!x.timer_started_at ? 3600 * 60 : 0);
-                
+      x.updated_at = Date.parse(x.updated_at) + (!!x.timer_started_at ? MINUTE : 0);
+      
       let key = `${x.project_id}||${x.task_id}`;
       if (!this.all[key]) { //Create 
         let out = new TimerModel();
@@ -38,18 +46,19 @@ class Accumulator {
         out.taskId = parseInt(x.task_id);
         out.taskTitle = x.task;
         out.id = !today ? 0 : x.id;
-        out.updated_at = x.updated_at; 
+        out.updatedAt = x.updated_at || 0; 
         out.hours = !today ? 0 : parseFloat(x.hours);
         this.all[key] = out;        
         this.flattened.push(out);
       } else if (today) {//Merge
-        let out = this.all[key];
+        let out = this.all[key];        
         out.hours += parseFloat(x.hours);
-        
-        if (!out.active && x.updated_at > out.updated_at) {
+        Utils.log(`Else on today: ${key}, ${out.updatedAt}, ${x.updated_at}, ${x.updated_at > out.updatedAt}`)
+
+        if (!out.active && (!out.updatedAt || x.updated_at > out.updatedAt)) {
           out.id = x.id;            
-          out.active = x.timer_started_at !== undefined;
-          out.updated_at = x.updated_at;
+          out.active = !!x.timer_started_at;
+          out.updatedAt = x.updated_at;
         }
       }
     });
@@ -123,24 +132,39 @@ export default class HarvestService extends BaseService {
     return def.promise();
   }
   
-  @memoize(FIVE_MIN, "timers")
-  getTimers():Promise<TimerModel[]> {
+  @memoize(WORK_DAY, "timers")
+  getPreviousTimers():Promise<TimerModel[]> {
     let def = new Deferred<TimerModel[]>();
-    
+  
     let dates = Utils.mostRecentBusinessDays(2);
     let acc = new Accumulator()
     let count = 0;
 
     dates.map((x,i) => {
       this.get(`/daily/${Utils.dayOfYear(x)}/${x.getFullYear()}`)
-        .then(asn => { acc.merge(asn, i === 0); }, def.reject)
+        .then(asn => { acc.merge(asn, false); }, def.reject)
         .always(() => {
           if (++count === dates.length) {
-            def.resolve(acc.flattened.sort((a,b) => b.updated_at - a.updated_at));
+            def.resolve(acc.flattened.sort((a,b) => b.updatedAt - a.updatedAt));
           }
         });
       ;  
     });
+    
+    return def.promise();
+  }
+  
+  getTimers():Promise<TimerModel[]> {
+    let def = new Deferred<TimerModel[]>();
+        
+    this.getPreviousTimers().then(previous => {
+      let acc = new Accumulator(previous);      
+      this.get(`/daily`).then(asn => { 
+        acc.merge(asn, true);
+        def.resolve(acc.flattened.sort((a,b) => b.updatedAt - a.updatedAt)); 
+      }, def.reject);
+      
+    }, def.reject);
  
     return def.promise();
   }

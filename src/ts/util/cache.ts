@@ -14,7 +14,7 @@ interface Key {
 let DEFAULT_NAMESPACE = '__default__';
 
 class Cache {
-  _cache:{[key:string]:{[key:string]:Entry}} = {};
+  private _cache:{[key:string]:{[key:string]:Entry}} = {};
    
   getKey(ns:string, prefix:string, args:any):Key {
     return {
@@ -23,7 +23,7 @@ class Cache {
     }
   }
   
-  _getCacheKey(key:Key):string {
+  private getCacheKey(key:Key):string {
     return `_cache_${key.ns}__${key.unique}`;
   }
 
@@ -32,10 +32,14 @@ class Cache {
     this._cache[ns] = {};
   }
   
-  get(key:Key):Entry {
-    if (this._cache[key.ns] === undefined || this._cache[key.ns][key.unique] === undefined) {
-      this._cache[key.ns] = {};
-      this._cache[key.ns][key.unique] = JSON.parse(localStorage.getItem(this._getCacheKey(key) || 'null'));
+  get(key:Key):{[key:string]:any} {
+    this._cache[key.ns] = this._cache[key.ns] || {};
+    if (this._cache[key.ns][key.unique] === undefined) {
+      let stored = JSON.parse(localStorage.getItem(this.getCacheKey(key) || 'null'));
+      if (stored) {
+        Utils.debug(`Received from cache ${JSON.stringify(stored)}`);    
+      }      
+      this._cache[key.ns][key.unique] = stored; 
     }
     
     let res = this._cache[key.ns][key.unique];
@@ -44,22 +48,22 @@ class Cache {
       this.delete(key);
       return;
     } else { 
-      return res;
+      return res ? res.data : null;
     }
   }
-  set(key:Key, data:{}, duration:number) {
-    Utils.log("Caching", key, data);
+  set(key:Key, data:{}, duration:number):void {
+    Utils.debug(`Caching ${key.ns} ${key.unique} ${JSON.stringify(data)}`);
     this._cache[key.ns] = this._cache[key.ns] || {}; 
-    this._cache[key.ns][key.unique] = {
+    let entry = this._cache[key.ns][key.unique] = {
       age : new Date().getTime(),
       duration: duration,
       data : data
     };
-    localStorage.setItem(this._getCacheKey(key), JSON.stringify(this._cache[key.ns][key.unique]));
+    localStorage.setItem(this.getCacheKey(key), JSON.stringify(entry));
   }
-  delete(key:Key) {
+  delete(key:Key):void {
     if (this._cache[key.ns]) {
-      localStorage.removeItem(this._getCacheKey(key));
+      localStorage.removeItem(this.getCacheKey(key));
       delete this._cache[key.ns][key.unique];
     }
   }

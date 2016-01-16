@@ -34,13 +34,13 @@ export default class MessageHandler {
     let data = e.payload;
     let key:string|number = this.translateKey(data[this.actionProperty]);
     
-    Utils.log(`Received: ${key}: ${JSON.stringify(data)}`);
+    Utils.debug(`Received: ${key}: ${JSON.stringify(data)}`);
     
     if (this._handlers[key]) {
       let ret = this._handlers[key].call(this, data);
       
       //Auto listen for errors if a promise is returned
-      if (ret.then) {
+      if (ret && ret.then) {
         ret.then(null, this.onError);
       }
     } else {
@@ -49,7 +49,7 @@ export default class MessageHandler {
   }
 
   onError(err) {
-    console.log(err);
+    Utils.error(err);
   }
   
   translateKey(key:number|string):string {
@@ -62,7 +62,7 @@ export default class MessageHandler {
 
   register(key:number|string, fn?:Pebble.Handler) {
     key = this.translateKey(key);
-    Utils.log("Registering handler", key);
+    Utils.debug("Registering handler", key);
     this._handlers[key] = fn;
   }
 }
