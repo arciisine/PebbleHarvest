@@ -34,7 +34,8 @@ function register(window) {
     }));
   }
   
-  window.console.debug = window.console.log;
+  var noop = function() {}
+  window.console.debug = noop; //window.console.log;
   window.console.error = window.console.log;
   window.require = imp
   window.define = register;

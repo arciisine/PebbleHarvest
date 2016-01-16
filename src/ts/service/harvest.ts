@@ -53,8 +53,7 @@ class Accumulator {
       } else if (today) {//Merge
         let out = this.all[key];        
         out.hours += parseFloat(x.hours);
-        Utils.log(`Else on today: ${key}, ${out.updatedAt}, ${x.updated_at}, ${x.updated_at > out.updatedAt}`)
-
+        
         if (!out.active && (!out.updatedAt || x.updated_at > out.updatedAt)) {
           out.id = x.id;            
           out.active = !!x.timer_started_at;
