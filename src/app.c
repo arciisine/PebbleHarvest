@@ -121,6 +121,7 @@ static void task_menu_open() {
 
 static void project_select_handler(MenuItem* item, bool longPress) {
   if (longPress) {
+    vibes_short_pulse();
     send_message(ActionProjectsRefresh, 1, AppKeyProject, 1);
     return; 
   } else if (item->id == 0) {
@@ -133,6 +134,7 @@ static void project_select_handler(MenuItem* item, bool longPress) {
 
 static void task_select_handler(MenuItem* item, bool longPress) {
   if (longPress) {
+    vibes_short_pulse();
     send_message(ActionTasksRefresh, 1, AppKeyTask, 1);
     return;
   } else if (item->id == 0) {
@@ -150,6 +152,7 @@ static void task_select_handler(MenuItem* item, bool longPress) {
 static void timer_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer selected: %p, %d %s",item, (int) item->id, item->title);  
   if (longPress) {
+    vibes_short_pulse();
     timer_menu_open();
     //send_message(ActionTimersRefresh, 1, AppKeyTimer, 1);
     return;
