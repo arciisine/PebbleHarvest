@@ -35,7 +35,7 @@ function register(window) {
   }
   
   var noop = function() {}
-  window.console.debug = window.console.log;
+  window.console.debug = noop; //window.console.log;
   window.console.error = window.console.log;
   window.require = imp
   window.define = register;
