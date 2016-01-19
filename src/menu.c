@@ -106,7 +106,7 @@ void menu_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t section_i
   if (section->title) {
     graphics_context_set_text_color(ctx, GColorFromHEX(0xFFFFFF));
     
-    //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw header: %p, %s", menu, section->title);    
+    //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw header: %d, %s", section_index, section->title);    
     graphics_draw_text(ctx, section->title, 
       fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), 
       (GRect) { .size = { bounds.size.w, TITLE_HEIGHT}, .origin = { 0, 0 } }, 
@@ -123,12 +123,13 @@ void menu_draw_row(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index
   Menu* menu = (Menu*) data;
   MenuItem* item = menu->sections[cell_index->section]->items[cell_index->row];
   
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw row: %d, %d, %s", cell_index->section, cell_index->row, item->title);
+  
   if (menu->basic_render) {
     menu_cell_basic_draw(ctx, cell_layer, item->title, item->subtitle, item->icon);
     return;
   }
   
-  //APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu draw row: %p, %p", menu, item);
   GRect bounds = layer_get_frame(cell_layer);
  
   int left_padding = (item->icon ? ICON_HEIGHT : 0) + CELL_PADDING;
@@ -163,8 +164,7 @@ MenuSection* menu_add_section(Menu* menu, char* title) {
   }
   
   section->title = strdup(title);
-  section->id = menu->section_count;
-  menu->section_count += 1; 
+  section->id = menu->section_count++;
   return section;
 }
 

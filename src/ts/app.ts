@@ -96,6 +96,12 @@ export default class App extends MessageHandler {
   @message(Action.TimersFetch)
   timerList(data:Pebble.MessagePayload) {
     return this.harvest.getTimers().then(items => {
+      if (!items.length) {
+        return this.queue.pushMap(
+          AppKey.Action, Action.TimerItem,
+          AppKey.Done, true
+        );
+      }
       items.sort((a,b) => {
         return a.active !== b.active ?
           (a.active ? -1 : 1) : 

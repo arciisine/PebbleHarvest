@@ -152,7 +152,7 @@ static void task_select_handler(MenuItem* item, bool longPress) {
 static void timer_select_handler(MenuItem* item, bool longPress) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer selected: %p, %d %s",item, (int) item->id, item->title);  
   if (longPress) {
-    vibes_short_pulse();
+    vibes_short_pulse();  
     timer_menu_open();
     //send_message(ActionTimersRefresh, 1, AppKeyTimer, 1);
     return;
@@ -218,30 +218,34 @@ static void timer_list_sync_state() {
 }
 
 static void on_timerlist_build(DictionaryIterator *iter, Action action) {
-  TaskTimer* buffered_timer;
-  buffered_timer = (TaskTimer*) malloc(sizeof(MenuItem));
-  buffered_timer->id = dict_key_int(iter, AppKeyTimer);
-  buffered_timer->project_id = dict_key_int(iter, AppKeyProject);
-  buffered_timer->task_id = dict_key_int(iter, AppKeyTask);
-  buffered_timer->active = dict_key_bool(iter, AppKeyActive);
-  buffered_timer->seconds = dict_key_int(iter, AppKeySeconds);
-  buffered_timer->project = strdup(dict_key_str(iter, AppKeyName));
-  buffered_timer->task = strdup(dict_key_str(iter, AppKeySubName));
+  //Only add if name is provided
   
-  menu_add_item(timer_menu, (MenuItem) {
-    .id = buffered_timer->id,
-    .title = buffered_timer->project,
-    .subtitle = buffered_timer->task,
-    .icon = buffered_timer->active ? checkmark_active : checkmark_inactive,
-    .data = buffered_timer 
-  }, timer_sections.primary);
-      
-  //Don't deallocate, system will manage .data values in menu_free_timer_data
-  buffered_timer = NULL;
-      
-  //If first item
-  if (timer_menu->sections[timer_sections.primary]->item_count  == 1) {
-    menu_layer_set_selected_index(timer_menu->layer, (MenuIndex){timer_sections.primary,0}, MenuRowAlignTop, false);
+  if (dict_find(iter, AppKeyTimer) != NULL) {
+    TaskTimer* buffered_timer;
+    buffered_timer = (TaskTimer*) malloc(sizeof(MenuItem));
+    buffered_timer->id = dict_key_int(iter, AppKeyTimer);
+    buffered_timer->project_id = dict_key_int(iter, AppKeyProject);
+    buffered_timer->task_id = dict_key_int(iter, AppKeyTask);
+    buffered_timer->active = dict_key_bool(iter, AppKeyActive);
+    buffered_timer->seconds = dict_key_int(iter, AppKeySeconds);
+    buffered_timer->project = strdup(dict_key_str(iter, AppKeyName));
+    buffered_timer->task = strdup(dict_key_str(iter, AppKeySubName));
+    
+    menu_add_item(timer_menu, (MenuItem) {
+      .id = buffered_timer->id,
+      .title = buffered_timer->project,
+      .subtitle = buffered_timer->task,
+      .icon = buffered_timer->active ? checkmark_active : checkmark_inactive,
+      .data = buffered_timer 
+    }, timer_sections.primary);
+        
+    //Don't deallocate, system will manage .data values in menu_free_timer_data
+    buffered_timer = NULL;
+        
+    //If first item
+    if (timer_menu->sections[timer_sections.primary]->item_count  == 1) {
+      menu_layer_set_selected_index(timer_menu->layer, (MenuIndex){timer_sections.primary,0}, MenuRowAlignTop, false);
+    }
   }
   
   if (dict_key_bool(iter, AppKeyDone)) {
@@ -403,9 +407,9 @@ static void init(void) {
   timer_menu->click = timer_select_handler;
   
   timer_sections = (Sections) {
-    .status = menu_add_section(timer_menu, NULL)->id,
+    .secondary = menu_add_section(timer_menu, NULL)->id,
     .primary = menu_add_section(timer_menu, NULL)->id,
-    .secondary = menu_add_section(timer_menu, NULL)->id  
+    .status = menu_add_section(timer_menu, NULL)->id,
   };
   
   timer_menu->basic_render = true;

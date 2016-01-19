@@ -30,7 +30,7 @@ typedef struct Menu {
   TextLayer* title_layer;
   Layer* parent;
   MenuSection* sections[20];
-  int section_count;
+  uint16_t section_count;
   MenuLayer* layer;
   void (*click)(MenuItem*, bool);
   WindowHandlers window_handlers;

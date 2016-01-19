@@ -190,7 +190,7 @@ export default class HarvestService extends BaseService {
   getPreviousTimers():Promise<TimerModel[]> {
     let def = new Deferred<TimerModel[]>();
   
-    let dates = Utils.mostRecentBusinessDays(2);
+    let dates = Utils.mostRecentBusinessDays(5, 1);
     let acc = new Accumulator()
     let count = 0;
 

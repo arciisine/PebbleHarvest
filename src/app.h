@@ -1,10 +1,10 @@
 #include <pebble.h>
 
 typedef struct Sections {
+  uint16_t status;
   uint16_t primary;
   uint16_t secondary;
   uint16_t tertiary;
-  uint16_t status;
 } Sections;
 
 typedef struct TaskTimer {
