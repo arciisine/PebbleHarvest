@@ -1,6 +1,7 @@
 import {Deferred, Promise} from '../util/deferred';
 import memoize from '../util/memoize';
 import Utils from '../util/utils';
+import {MINUTE, FIVE_MIN, HOUR, WORK_DAY} from '../util/cache';
 
 import TimerModel from '../model/timer';
 import TaskModel from '../model/task';
@@ -8,12 +9,6 @@ import ProjectModel from '../model/project';
 
 import BaseService from './base';  
 import OptionService from './options';
-
-let MINUTE   = 1000 * 60
-let FIVE_MIN = MINUTE * 5
-let HOUR     = MINUTE * 60
-let WORK_DAY = HOUR * 8
-let DAY      = HOUR * 24
 
 let UNTIL_MIDNIGHT = function() {
     var midnight = new Date();
@@ -96,19 +91,19 @@ export default class HarvestService extends BaseService {
   
   onTokenResponse(data):any {
     Utils.log(`Received Token: ${JSON.stringify(data)}`)
-    this.options.set('oauth.access_token', data.access_token)
+    this.options.set('oauth.access_token',  data.access_token)
     this.options.set('oauth.refresh_token', data.refresh_token),
-    this.options.set('oauth.expires_in', data.expires_in)
+    this.options.set('oauth.expires_in',    data.expires_in)
     this.options.save();
   }
   
   validateCode():Promise<any> {
     return this.exec('application/x-www-form-urlencoded', Utils.toURL, 'application/json', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
-      code : this.options.get("oauth.code"),
-      client_id : this.options.get("harvest.client_id"),
+      code          : this.options.get("oauth.code"),
+      client_id     : this.options.get("harvest.client_id"),
       client_secret : this.options.get("harvest.client_secret"),
-      redirect_uri : this.options.get("harvest.redirect_uri"),
-      grant_type : "authorization_code"
+      redirect_uri  : this.options.get("harvest.redirect_uri"),
+      grant_type    : 'authorization_code'
     })
       .then((data) => this.onTokenResponse(data), (e) => {
         Utils.log(`Failure: ${e}`)
@@ -118,8 +113,9 @@ export default class HarvestService extends BaseService {
   refreshToken():Promise<any> {
     return this.exec('application/x-www-form-urlencoded', Utils.toURL, 'application/json', JSON.parse, 'POST', `${this.baseUrl}/oauth2/token`, {
       refresh_token : this.options.get("oauth.refresh_token"),
-      client_id : this.options.get("harvest.client_id"),
-      client_secret : this.options.get("harvest.client_secret")
+      client_id     : this.options.get("harvest.client_id"),
+      client_secret : this.options.get("harvest.client_secret"),
+      grant_type    : 'refresh_token'
     })
       .then((data) => this.onTokenResponse(data));    
   }

@@ -12,6 +12,7 @@ import ProjectModel from './model/project';
 
 import Utils from './util/utils';
 import Cache from './util/cache';
+import {HOUR} from './util/cache';
 import {Action, ActionNames, AppKey} from './message-format';
 
 export default class App extends MessageHandler {
@@ -32,6 +33,7 @@ export default class App extends MessageHandler {
     }
     
     this.options.onUpdate = () => {
+      this.options.postInit();
       this.harvest.validateCode()
         .then(
           () => this.authenticate(),
@@ -41,7 +43,7 @@ export default class App extends MessageHandler {
     
     this.harvest = new HarvestService(this.options);
         
-    Pebble.addEventListener('ready', () => { this.authenticate(); });
+    Pebble.addEventListener('ready', () => this.authenticate());
   }
   
   authenticate():void {
@@ -55,7 +57,7 @@ export default class App extends MessageHandler {
     Utils.log("Error: ",e);
     this.queue.pushMap(AppKey.Action, Action.Error);  
   }
- 
+  
   @message(Action.ProjectsFetch)
   projectList(data:Pebble.MessagePayload) {
     return this.harvest.getRecentProjectTaskMap().then(recent => {

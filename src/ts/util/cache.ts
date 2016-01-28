@@ -12,6 +12,11 @@ interface Key {
 }
 
 let DEFAULT_NAMESPACE = '__default__';
+let MINUTE   = 1000 * 60
+let FIVE_MIN = MINUTE * 5
+let HOUR     = MINUTE * 60
+let WORK_DAY = HOUR * 8
+let DAY      = HOUR * 24
 
 class Cache {
   private _cache:{[key:string]:{[key:string]:Entry}} = {};
@@ -70,3 +75,5 @@ class Cache {
 }
 
 export default new Cache();
+
+export {MINUTE,FIVE_MIN,HOUR,WORK_DAY,DAY};

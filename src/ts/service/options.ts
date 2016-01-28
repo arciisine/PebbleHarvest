@@ -14,6 +14,7 @@ export default class OptionService {
   init():{} {
     Pebble.addEventListener('showConfiguration', (e) => Pebble.openURL(this._url + '#'+encodeURIComponent(JSON.stringify(this._data))));
     Pebble.addEventListener('webviewclosed', (e) => {
+      this._data = {};
       this.putAll(JSON.parse(decodeURIComponent(e.response || '{}')));
       this.onUpdate();
     });

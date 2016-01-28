@@ -27,7 +27,7 @@ static char* RECENT_SECTION_TITLE = "Recent";
 static char* ASSIGNED_SECTION_TITLE = "Assigned";
 static char* LOADING_TEXT = "Loading ...";
 static char* EMPTY_TEXT = "No Items Found";
-static uint32_t ADD_TASK_KEY = 2;
+uint16_t ADD_TASK_KEY = 3;
 
 static MenuItem* active_item;
 
@@ -401,6 +401,14 @@ static void init_message() {
   message_show(LOADING_TEXT);
 }
 
+static void init_comm() {
+  // Register message handlers
+  app_message_register_inbox_received(on_message);
+  
+  // Init buffers
+  app_message_open(512, 512);
+}
+
 static void init(void) {
   //Init Timer Menu
   timer_menu = menu_create(TIMER_MENU_TITLE);
@@ -443,12 +451,7 @@ static void init(void) {
   plus_icon = gbitmap_create_with_resource(RESOURCE_ID_PLUS);   
 
   init_message();
-    
-  // Register message handlers
-  app_message_register_inbox_received(on_message);
-  
-  // Init buffers
-  app_message_open(512, 512);
+  init_comm();    
 }
 
 static void deinit(void) {
@@ -467,6 +470,7 @@ static void deinit(void) {
 }
 
 int main(void) {
+  //Normal startup
   init();
   app_event_loop();
   deinit();

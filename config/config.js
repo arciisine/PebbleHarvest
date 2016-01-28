@@ -1,7 +1,6 @@
 window.config = (function() {
 
   var config = {
-      options : {},
       queryParams : function(target, prefix) {
           target = target || window.location.search;
           var match,
@@ -31,9 +30,11 @@ window.config = (function() {
         document.querySelector('form input[name="redirect_uri"]').value = ('' + window.location).split('#')[0].split('&code')[0];  
       },
       deauthorize : function() {
-        config.optionsToForm({
+        var options = {
           'oauth.code' : null
-        });
+        }
+        config.optionsToForm(options);
+        config.writeOptions(options);
         config.updateDisplay();
       },
       updateDisplay : function() {
