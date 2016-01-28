@@ -33,7 +33,6 @@ export default class App extends MessageHandler {
     }
     
     this.options.onUpdate = () => {
-      this.options.postInit();
       this.harvest.validateCode()
         .then(
           () => this.authenticate(),

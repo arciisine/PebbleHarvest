@@ -12,7 +12,10 @@ export default class OptionService {
   }
   
   init():{} {
-    Pebble.addEventListener('showConfiguration', (e) => Pebble.openURL(this._url + '#'+encodeURIComponent(JSON.stringify(this._data))));
+    Pebble.addEventListener('showConfiguration', (e) => {
+      Utils.debug("Loading config: ", JSON.stringify(this._data));
+      Pebble.openURL(this._url + '#'+encodeURIComponent(JSON.stringify(this._data)))
+    });
     Pebble.addEventListener('webviewclosed', (e) => {
       this._data = {};
       this.putAll(JSON.parse(decodeURIComponent(e.response || '{}')));
@@ -34,7 +37,9 @@ export default class OptionService {
   }
 
   read():{} {
-    this._data = JSON.parse(localStorage.getItem(this._ns + "_data") || '{}');
+    var toParse = localStorage.getItem(this._ns + "_data") || '{}';
+    Utils.debug(`Parsing: |${toParse}|`)
+    this._data = JSON.parse(toParse);
     Utils.debug(JSON.stringify(this._data));
     return this._data;
   }

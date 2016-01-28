@@ -58,7 +58,7 @@ window.config = (function() {
           var key = inputs[i].form.name + '.' + inputs[i].name;
           console.log('|'+key+'|', opts[key]);
           if (opts[key] !== undefined) {
-            this.options[key] = inputs[i].value = opts[key];
+            inputs[i].value = opts[key];
             inputs[i].dispatchEvent(new Event("change"))
           }
         }
@@ -78,6 +78,7 @@ window.config = (function() {
       },
       saveAndClose : function() {
         var opts = this.formToOptions();
+        delete opts.redirect_uri;
         var str = this.writeOptions(opts);
         var returnTo = this.queryParams().return_to || 'pebblejs://close#';
         
